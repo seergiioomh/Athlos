@@ -1,0 +1,22 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    // Las Edge Functions corren en Deno, con otro runtime y otros imports
+    // (`npm:`, el global `Deno`). Las comprueba el CLI de Supabase, no tsc.
+    "supabase"
+  ]
+}

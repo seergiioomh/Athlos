@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(npx expo *)",
+      "Bash(node -e \"const p=require\\('./node_modules/react-native-svg/package.json'\\);console.log\\('svg',p.version\\)\")",
+      "Bash(npm view *)",
+      "WebFetch(domain:docs.hugeicons.com)",
+      "Bash(rm -rf scripts)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('scripts:', JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(echo \"--- tsc exit: $? ---\")",
+      "Bash(node -e \"const a=require\\('./app.json'\\).expo; console.log\\('ios:', JSON.stringify\\(a.ios\\)\\); console.log\\('android:', JSON.stringify\\(a.android?.package ?? null\\)\\); console.log\\('slug:', a.slug, '| version:', a.version\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(p.description\\)\")",
+      "Bash(xargs -r -n1 basename)",
+      "Bash(npm uninstall *)",
+      "Bash(node -e \"const d=require\\('./package.json'\\).dependencies; Object.keys\\(d\\).filter\\(k=>/icon|phosphor|lucide|vector/i.test\\(k\\)\\).forEach\\(k=>console.log\\(' ', k, d[k]\\)\\)\")",
+      "Bash(node -e \"const d=require\\('./package.json'\\).dependencies; Object.keys\\(d\\).filter\\(k=>/icon|phosphor|vector/i.test\\(k\\)\\).forEach\\(k=>console.log\\(' ', k, d[k]\\)\\)\")",
+      "Bash(npx eslint *)",
+      "Bash(echo \"--- lint exit: $? ---\")",
+      "WebSearch",
+      "Bash(bc)",
+      "Bash(python -)",
+      "mcp__visualize__read_me",
+      "Bash(python -X utf8 -c ' *)",
+      "mcp__visualize__show_widget",
+      "Bash(node -e \"const a=require\\('./app.json'\\).expo; console.log\\('ios:', a.ios.bundleIdentifier\\); console.log\\('android:', a.android.package\\)\")",
+      "Bash(npx eas-cli@latest --version)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

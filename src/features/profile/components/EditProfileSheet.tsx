@@ -1,0 +1,458 @@
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useEffect, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+import { ChipGroup } from "@/components/ui/ChipGroup";
+import { ChipMultiGroup } from "@/components/ui/ChipMultiGroup";
+import {
+  cardioOptions,
+  dailyActivityOptions,
+  equipmentOptions,
+  experienceOptions,
+  focusAreaOptions,
+  goalOptions,
+  sessionMinutesOptions,
+  sexOptions,
+  sleepOptions,
+  techniqueOptions,
+  weekdayOptions,
+} from "@/features/onboarding/schema";
+import { HomeColors } from "@/features/home/home-theme";
+import type { ProfileRow } from "@/types/database";
+
+export type EditSection = "personal" | "training";
+
+interface Props {
+  section: EditSection | null;
+  profile: ProfileRow;
+  saving: boolean;
+  error?: string;
+  onClose: () => void;
+  onSave: (values: Partial<ProfileRow>) => void;
+}
+
+const onlyDigits = (value: string) => value.replace(/[^0-9]/g, "");
+
+export function EditProfileSheet({
+  section,
+  profile,
+  saving,
+  error,
+  onClose,
+  onSave,
+}: Props) {
+  const [draft, setDraft] = useState<Partial<ProfileRow>>({});
+  const [birthDate, setBirthDate] = useState("");
+  const [invalid, setInvalid] = useState<string | null>(null);
+
+  // Cada apertura parte de lo que hay guardado, no de la edición anterior.
+  useEffect(() => {
+    if (!section) return;
+
+    setDraft({});
+    setInvalid(null);
+    setBirthDate(profile.birth_date ?? "");
+  }, [section, profile.birth_date]);
+
+  if (!section) return null;
+
+  const value = <K extends keyof ProfileRow>(key: K): ProfileRow[K] =>
+    (draft[key] ?? profile[key]) as ProfileRow[K];
+
+  const set = <K extends keyof ProfileRow>(key: K, next: ProfileRow[K]) => {
+    setDraft((current) => ({ ...current, [key]: next }));
+    setInvalid(null);
+  };
+
+  const submit = () => {
+    if (section === "personal") {
+      const name = String(value("display_name") ?? "").trim();
+      if (name.length < 2) return setInvalid("Escribe tu nombre.");
+
+      // Formato ISO, que es el que espera la columna `date`.
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+        return setInvalid("La fecha va como AAAA-MM-DD.");
+      }
+
+      const born = new Date(birthDate);
+      const years = (Date.now() - born.getTime()) / 31_557_600_000;
+
+      if (!Number.isFinite(years) || years < 14 || years > 100) {
+        return setInvalid("La fecha de nacimiento no cuadra.");
+      }
+
+      const height = Number(value("height_cm"));
+      if (!Number.isFinite(height) || height < 100 || height > 250) {
+        return setInvalid("La altura tiene que estar entre 100 y 250 cm.");
+      }
+
+      onSave({
+        ...draft,
+        display_name: name,
+        birth_date: birthDate,
+        height_cm: height,
+      });
+
+      return;
+    }
+
+    onSave(draft);
+  };
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.lift}
+      >
+        <View style={styles.sheet}>
+          <View style={styles.grabber} />
+
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              {section === "personal" ? "Datos personales" : "Entrenamiento"}
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onClose}
+              hitSlop={10}
+              style={styles.close}
+              accessibilityLabel="Cerrar"
+            >
+              <HugeiconsIcon
+                icon={Cancel01Icon}
+                size={18}
+                color={HomeColors.text}
+                strokeWidth={2}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.body}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {section === "personal" ? (
+              <>
+                <Field label="Nombre">
+                  <TextInput
+                    style={styles.input}
+                    value={String(value("display_name") ?? "")}
+                    onChangeText={(text) => set("display_name", text)}
+                    placeholder="Sergio"
+                    placeholderTextColor={HomeColors.textTertiary}
+                    autoCapitalize="words"
+                    maxLength={40}
+                  />
+                </Field>
+
+                <View style={styles.row}>
+                  <Field label="Nacimiento" style={styles.flex}>
+                    <TextInput
+                      style={styles.input}
+                      value={birthDate}
+                      onChangeText={(text) => {
+                        setBirthDate(text.replace(/[^0-9-]/g, ""));
+                        setInvalid(null);
+                      }}
+                      placeholder="1998-05-12"
+                      placeholderTextColor={HomeColors.textTertiary}
+                      maxLength={10}
+                    />
+                  </Field>
+
+                  <Field label="Altura (cm)" style={styles.flex}>
+                    <TextInput
+                      style={styles.input}
+                      value={String(value("height_cm") ?? "")}
+                      onChangeText={(text) =>
+                        set("height_cm", Number(onlyDigits(text)) || null)
+                      }
+                      keyboardType="number-pad"
+                      maxLength={3}
+                    />
+                  </Field>
+                </View>
+
+                <Field label="Sexo">
+                  <ChipGroup
+                    options={sexOptions}
+                    value={value("sex") ?? undefined}
+                    onChange={(next) => set("sex", next)}
+                  />
+                </Field>
+
+                <Text style={styles.note}>
+                  El peso se registra desde Progreso, para que quede el
+                  histórico.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Field label="Objetivo">
+                  <ChipGroup
+                    options={goalOptions}
+                    value={value("goal") ?? undefined}
+                    onChange={(next) => set("goal", next)}
+                  />
+                </Field>
+
+                <Field label="Experiencia">
+                  <ChipGroup
+                    options={experienceOptions}
+                    value={value("experience") ?? undefined}
+                    onChange={(next) => set("experience", next)}
+                  />
+                </Field>
+
+                <Field label="Técnica en los básicos">
+                  <ChipGroup
+                    options={techniqueOptions}
+                    value={value("technique_level") ?? undefined}
+                    onChange={(next) => set("technique_level", next)}
+                  />
+                </Field>
+
+                <Field
+                  label="Qué priorizar"
+                  hint="Hasta cuatro grupos."
+                >
+                  <ChipMultiGroup
+                    options={focusAreaOptions}
+                    value={value("focus_areas") ?? []}
+                    onChange={(next) => set("focus_areas", next.slice(0, 4))}
+                  />
+                </Field>
+
+                <Field
+                  label="Días que entrenas"
+                  hint="Los días por semana se calculan de aquí."
+                >
+                  <ChipMultiGroup
+                    options={weekdayOptions}
+                    value={value("training_days") ?? []}
+                    onChange={(next) => {
+                      // Los dos campos tienen que contar lo mismo, así que el
+                      // número se deriva y no se edita por separado.
+                      set("training_days", next);
+                      set("days_per_week", next.length);
+                    }}
+                  />
+                </Field>
+
+                <Field label="Minutos por sesión">
+                  <ChipGroup
+                    options={sessionMinutesOptions}
+                    value={value("session_minutes") ?? undefined}
+                    onChange={(next) => set("session_minutes", next)}
+                  />
+                </Field>
+
+                <Field label="Cardio">
+                  <ChipGroup
+                    options={cardioOptions}
+                    value={value("cardio") ?? undefined}
+                    onChange={(next) => set("cardio", next)}
+                  />
+                </Field>
+
+                <Field label="Actividad diaria">
+                  <ChipGroup
+                    options={dailyActivityOptions}
+                    value={value("daily_activity") ?? undefined}
+                    onChange={(next) => set("daily_activity", next)}
+                  />
+                </Field>
+
+                <Field label="Horas de sueño">
+                  <ChipGroup
+                    options={sleepOptions}
+                    value={value("sleep_hours") ?? undefined}
+                    onChange={(next) => set("sleep_hours", next)}
+                  />
+                </Field>
+
+                <Field label="Dónde entrenas">
+                  <ChipGroup
+                    options={equipmentOptions}
+                    value={value("equipment") ?? undefined}
+                    onChange={(next) => set("equipment", next)}
+                  />
+                </Field>
+
+                <Field
+                  label="Lesiones o limitaciones"
+                  hint="El coach lo tiene en cuenta al elegir ejercicios."
+                >
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={String(value("limitations") ?? "")}
+                    onChangeText={(text) => set("limitations", text)}
+                    placeholder="Hombro derecho delicado"
+                    placeholderTextColor={HomeColors.textTertiary}
+                    multiline
+                    maxLength={300}
+                  />
+                </Field>
+
+                <Field label="Ejercicios que no quieres hacer">
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={String(value("avoid_exercises") ?? "")}
+                    onChangeText={(text) => set("avoid_exercises", text)}
+                    placeholder="Burpees, peso muerto convencional"
+                    placeholderTextColor={HomeColors.textTertiary}
+                    multiline
+                    maxLength={300}
+                  />
+                </Field>
+              </>
+            )}
+
+            {(invalid || error) && (
+              <Text style={styles.error}>{invalid ?? error}</Text>
+            )}
+          </ScrollView>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={submit}
+            disabled={saving}
+            style={[styles.save, saving && styles.saveDisabled]}
+          >
+            <Text style={styles.saveText}>
+              {saving ? "Guardando…" : "Guardar cambios"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  style,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  style?: object;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={[styles.field, style]}>
+      <Text style={styles.label}>{label}</Text>
+      {hint && <Text style={styles.hint}>{hint}</Text>}
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+
+  lift: { flex: 1, justifyContent: "flex-end" },
+
+  sheet: {
+    maxHeight: "88%",
+    backgroundColor: HomeColors.background,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 34,
+    borderTopWidth: 1,
+    borderColor: HomeColors.border,
+  },
+
+  grabber: {
+    alignSelf: "center",
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: HomeColors.border,
+  },
+
+  header: {
+    marginTop: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  title: { fontSize: 22, fontWeight: "700", color: HomeColors.text },
+
+  close: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: HomeColors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  body: { paddingBottom: 8 },
+
+  field: { marginTop: 22, gap: 8 },
+  row: { flexDirection: "row", gap: 12 },
+  flex: { flex: 1 },
+
+  label: { fontSize: 15, fontWeight: "700", color: HomeColors.text },
+  hint: { marginTop: -4, fontSize: 12, color: HomeColors.textSecondary },
+
+  input: {
+    height: 50,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    backgroundColor: HomeColors.surface,
+    borderWidth: 1,
+    borderColor: HomeColors.border,
+    fontSize: 16,
+    color: HomeColors.text,
+  },
+
+  textArea: { height: 88, paddingTop: 14, textAlignVertical: "top" },
+
+  note: {
+    marginTop: 20,
+    fontSize: 12,
+    lineHeight: 17,
+    color: HomeColors.textSecondary,
+  },
+
+  error: { marginTop: 18, fontSize: 13, color: HomeColors.errorText },
+
+  save: {
+    marginTop: 20,
+    height: 56,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: HomeColors.primary,
+  },
+
+  saveDisabled: { backgroundColor: HomeColors.primaryMuted },
+
+  saveText: { fontSize: 16, fontWeight: "700", color: HomeColors.onPrimary },
+});
