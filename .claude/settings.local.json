@@ -53,7 +53,9 @@
       "Bash(npx eas-cli *)",
       "Bash(npx expo-updates *)",
       "Bash(python -c \"import sys,json; print\\(json.load\\(sys.stdin\\)['hash']\\)\")",
-      "Bash(grep -o '\"hash\":\"[a-f0-9]\\\\{40\\\\}\"}$')"
+      "Bash(grep -o '\"hash\":\"[a-f0-9]\\\\{40\\\\}\"}$')",
+      "Bash(python -c \"import sys,json; print\\('huella actual:', json.load\\(sys.stdin\\)['hash']\\)\")",
+      "Bash(python -c ' *)"
     ]
   }
 }

@@ -251,6 +251,36 @@ que exportar web no aporta nada.
 Se arreglaría de raíz quitando la salida estática de `app.json`, pero eso
 cambia la huella y obliga a recompilar. Cuando toque la siguiente build.
 
+### Comprueba la huella justo antes de publicar
+
+Un `eas update` solo llega a un dispositivo si su `runtimeVersion` es idéntica
+a la de la build instalada. Si no coincide, no falla nada: se publica, se ve en
+el panel, y el móvil simplemente la ignora. Parece que la corrección no
+funciona cuando en realidad no ha llegado.
+
+```bash
+npx expo-updates fingerprint:generate --platform ios
+```
+
+```bash
+npx eas-cli build:list --limit 1        # Runtime Version de lo instalado
+```
+
+Cuentan para la huella `.gitignore`, `eas.json`, `app.json`, `package.json`
+(scripts y versión de react-native), los iconos y el autolinking. **El
+`.gitignore` cuenta**, aunque no influya en nada de lo que se ejecuta: añadirle
+una línea ya invalida las actualizaciones para las builds existentes. Pasó.
+
+El código de `src/` no cuenta, que es justo lo que permite corregir errores por
+aire.
+
+Si la huella ya se movió y hace falta publicar igualmente, restaura el archivo
+culpable, publica, y vuelve a dejarlo como estaba:
+
+```bash
+git show HEAD~1:.gitignore > .gitignore
+```
+
 ---
 
 ## Estado y pendientes
