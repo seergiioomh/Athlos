@@ -59,7 +59,8 @@
       "Bash(grep -inE \"eyJ[A-Za-z0-9]{10,}|sk-ant|service_role|password|contrase.a *[:=]|postgresql://\")",
       "Bash(git remote *)",
       "Bash(git commit -q -m 'Fija la receta de la huella a un commit concreto *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git commit -q -m 'Enlaza PROJECT_CONTEXT.md desde AGENTS.md *)"
     ]
   }
 }
