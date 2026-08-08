@@ -10,10 +10,13 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.athlos.app"
+      "bundleIdentifier": "com.sergiohateos.athlos",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.athlos.app",
+      "package": "com.sergiohateos.athlos",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -49,6 +52,13 @@
         "projectId": "fc9f5e21-69f6-48cd-bea2-830a92faf018"
       }
     },
-    "owner": "esematt"
+    "owner": "esematt",
+    "updates": {
+      "url": "https://u.expo.dev/fc9f5e21-69f6-48cd-bea2-830a92faf018",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    }
   }
 }

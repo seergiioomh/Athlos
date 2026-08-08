@@ -66,7 +66,7 @@ export async function generatePlan(
   focus?: string
 ): Promise<WorkoutPlan> {
   const { data, error } = await supabase.functions.invoke("generate-workout", {
-    body: { user_id: userId, focus },
+    body: { focus },
   });
 
   if (error) throw error;

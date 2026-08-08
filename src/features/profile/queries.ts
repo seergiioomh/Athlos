@@ -1,30 +1,34 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { profileKeys } from "@/features/onboarding/queries";
-import { DEV_USER_ID } from "@/lib/supabase";
 import { saveProfile } from "@/services/profile";
 import { fetchActiveSplit, generateSplit } from "@/services/split";
 import type { ProfileRow } from "@/types/database";
+import { useUserId } from "@/features/auth/session";
 
 export const splitKeys = {
   active: (userId: string) => ["split", "active", userId] as const,
 };
 
 export function useActiveSplit() {
+  const userId = useUserId()!;
+
   return useQuery({
-    queryKey: splitKeys.active(DEV_USER_ID!),
-    queryFn: () => fetchActiveSplit(DEV_USER_ID!),
+    queryKey: splitKeys.active(userId),
+    queryFn: () => fetchActiveSplit(userId),
   });
 }
 
 export function useGenerateSplit() {
+  const userId = useUserId()!;
+
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => generateSplit(DEV_USER_ID!),
+    mutationFn: () => generateSplit(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: splitKeys.active(DEV_USER_ID!),
+        queryKey: splitKeys.active(userId),
       });
     },
     // Diseñar el reparto cuesta una llamada a la IA: que reintente el usuario.
@@ -37,13 +41,15 @@ export function useGenerateSplit() {
  * petición conservan su valor, así que se puede editar un bloque suelto.
  */
 export function useUpdateProfile() {
+  const userId = useUserId()!;
+
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (values: Partial<ProfileRow>) =>
-      saveProfile(DEV_USER_ID!, values),
+      saveProfile(userId, values),
     onSuccess: (profile) => {
-      queryClient.setQueryData(profileKeys.profile(DEV_USER_ID!), profile);
+      queryClient.setQueryData(profileKeys.profile(userId), profile);
     },
   });
 }

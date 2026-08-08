@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { StreakBadge } from "@/components/ui/StreakBadge";
+import { signOut, useSession } from "@/features/auth/session";
 import { HomeColors } from "@/features/home/home-theme";
 import { EXP_PER_LEVEL, levelFromStats } from "@/features/home/level";
 import { useProfile } from "@/features/onboarding/queries";
@@ -100,6 +101,7 @@ export function ProfileScreen() {
   const { data: summary } = useProgressSummary();
   const { data: streak, error: streakError } = useStreak();
   const { data: split } = useActiveSplit();
+  const { email } = useSession();
   const update = useUpdateProfile();
 
   if (isPending || !profile) {
@@ -284,6 +286,16 @@ export function ProfileScreen() {
             last
           />
         </View>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => signOut()}
+          style={styles.signOut}
+        >
+          <Text style={styles.signOutText}>Cerrar sesión</Text>
+        </TouchableOpacity>
+
+        {email && <Text style={styles.email}>{email}</Text>}
 
         <Text style={styles.version}>
           ATHLOS {Constants.expoConfig?.version ?? ""}
@@ -534,6 +546,28 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: HomeColors.text,
     textAlign: "right",
+  },
+
+  signOut: {
+    marginTop: 30,
+    height: 50,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: HomeColors.surface,
+  },
+
+  signOutText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: HomeColors.errorText,
+  },
+
+  email: {
+    marginTop: 12,
+    fontSize: 12,
+    color: HomeColors.textTertiary,
+    textAlign: "center",
   },
 
   version: {

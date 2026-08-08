@@ -160,28 +160,27 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Falta el secreto ANTHROPIC_API_KEY" }, 500);
   }
 
-  let userId: string;
   let focusHint: string | undefined;
 
   try {
     const body = await req.json();
-    userId = body.user_id;
     focusHint = body.focus;
   } catch {
     return json({ error: "Cuerpo JSON inválido" }, 400);
   }
 
-  if (!userId) {
-    return json({ error: "Falta user_id" }, 400);
-  }
-
-  // Service role: esta función es la única que escribe planes, y lo hace
-  // saltándose RLS a propósito. Por eso `user_id` viene en el cuerpo — cuando
-  // entre Auth hay que sacarlo del JWT en vez de confiar en el cliente.
+  // Service role: esta función escribe planes saltándose RLS a propósito.
+  // Justo por eso el usuario NO puede venir del cuerpo de la petición.
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  const userId = await userFromRequest(req, supabase);
+
+  if (!userId) {
+    return json({ error: "Sesión no válida" }, 401);
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -467,4 +466,22 @@ function yearsSince(iso: string) {
   if (beforeBirthday) years -= 1;
 
   return years;
+}
+
+/**
+ * Saca el usuario del token que envía la app, en lugar de creerse el id que
+ * venga en el cuerpo. Con el `user_id` en el cuerpo, cualquiera con la clave
+ * anon —que va dentro del bundle— podía pedir datos de otra persona.
+ */
+async function userFromRequest(
+  req: Request,
+  supabase: ReturnType<typeof createClient>,
+): Promise<string | null> {
+  const header = req.headers.get("Authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+
+  const { data, error } = await supabase.auth.getUser(header.slice(7));
+  if (error) return null;
+
+  return data.user?.id ?? null;
 }

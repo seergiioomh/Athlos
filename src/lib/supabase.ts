@@ -2,6 +2,7 @@
 // implementa `URL` del todo, así que el polyfill va antes que el cliente.
 import "react-native-url-polyfill/auto";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 
 // Ojo: `process.env.EXPO_PUBLIC_*` solo se sustituye con acceso por punto.
@@ -9,32 +10,39 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    "Faltan EXPO_PUBLIC_SUPABASE_URL o EXPO_PUBLIC_SUPABASE_ANON_KEY. " +
-      "Copia .env.example como .env y rellénalo (después reinicia con `npx expo start --clear`)."
-  );
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    // Todavía no hay login: sin sesión que guardar, nos ahorramos el
-    // almacenamiento y el refresco de tokens.
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-  },
-});
+const missing = [
+  !supabaseUrl && "EXPO_PUBLIC_SUPABASE_URL",
+  !supabaseAnonKey && "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+].filter(Boolean) as string[];
 
 /**
- * Usuario fijo mientras no exista autenticación. Cuando entre Auth, esto
- * se sustituye por el id de la sesión y se ejecuta la migración
- * 0004_drop_dev_access.sql.
+ * Qué configuración falta, o null si está todo. La app lo enseña en pantalla
+ * en lugar de lanzar una excepción.
+ *
+ * Antes esto era un `throw` en el cuerpo del módulo. En desarrollo se ve el
+ * error en rojo y se entiende; en una app compilada, una excepción al importar
+ * deja la pantalla de inicio congelada sin decir absolutamente nada, y no hay
+ * consola donde mirar.
  */
-export const DEV_USER_ID = process.env.EXPO_PUBLIC_DEV_USER_ID;
+export const configError =
+  missing.length > 0
+    ? `Falta configuración en la build: ${missing.join(", ")}`
+    : null;
 
-if (!DEV_USER_ID) {
-  throw new Error(
-    "Falta EXPO_PUBLIC_DEV_USER_ID. Créalo en Supabase (Authentication → Users) y ponlo en .env."
-  );
-}
+export const supabase = createClient(
+  // Si falta la URL, el cliente se crea igual contra un destino inexistente:
+  // lo que importa es que la app arranque y pueda contar el problema.
+  supabaseUrl ?? "https://sin-configurar.invalid",
+  supabaseAnonKey ?? "sin-configurar",
+  {
+    auth: {
+      // La sesión vive en el almacenamiento del dispositivo: sin esto habría
+      // que iniciar sesión en cada arranque.
+      storage: AsyncStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+      // Solo tiene sentido en web, donde el token vuelve en la URL.
+      detectSessionInUrl: false,
+    },
+  }
+);

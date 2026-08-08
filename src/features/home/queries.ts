@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { DEV_USER_ID } from "@/lib/supabase";
 import {
   fetchRecentSessions,
   fetchStats,
   fetchWeightHistory,
 } from "@/services/home";
+import { useUserId } from "@/features/auth/session";
 
 export const homeKeys = {
   weight: (userId: string) => ["home", "weight", userId] as const,
@@ -14,22 +14,28 @@ export const homeKeys = {
 };
 
 export function useWeightHistory() {
+  const userId = useUserId()!;
+
   return useQuery({
-    queryKey: homeKeys.weight(DEV_USER_ID!),
-    queryFn: () => fetchWeightHistory(DEV_USER_ID!),
+    queryKey: homeKeys.weight(userId),
+    queryFn: () => fetchWeightHistory(userId),
   });
 }
 
 export function useRecentSessions() {
+  const userId = useUserId()!;
+
   return useQuery({
-    queryKey: homeKeys.sessions(DEV_USER_ID!),
-    queryFn: () => fetchRecentSessions(DEV_USER_ID!),
+    queryKey: homeKeys.sessions(userId),
+    queryFn: () => fetchRecentSessions(userId),
   });
 }
 
 export function useTrainingStats() {
+  const userId = useUserId()!;
+
   return useQuery({
-    queryKey: homeKeys.stats(DEV_USER_ID!),
-    queryFn: () => fetchStats(DEV_USER_ID!),
+    queryKey: homeKeys.stats(userId),
+    queryFn: () => fetchStats(userId),
   });
 }

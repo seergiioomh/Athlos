@@ -88,21 +88,14 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Falta el secreto ANTHROPIC_API_KEY" }, 500);
   }
 
-  let userId: string;
-
-  try {
-    const body = await req.json();
-    userId = body.user_id;
-  } catch {
-    return json({ error: "Cuerpo JSON inválido" }, 400);
-  }
-
-  if (!userId) return json({ error: "Falta user_id" }, 400);
-
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  const userId = await userFromRequest(req, supabase);
+
+  if (!userId) return json({ error: "Sesión no válida" }, 401);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -206,4 +199,22 @@ function json(body: unknown, status: number) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+/**
+ * Saca el usuario del token que envía la app, en lugar de creerse el id que
+ * venga en el cuerpo. Con el `user_id` en el cuerpo, cualquiera con la clave
+ * anon —que va dentro del bundle— podía pedir datos de otra persona.
+ */
+async function userFromRequest(
+  req: Request,
+  supabase: ReturnType<typeof createClient>,
+): Promise<string | null> {
+  const header = req.headers.get("Authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+
+  const { data, error } = await supabase.auth.getUser(header.slice(7));
+  if (error) return null;
+
+  return data.user?.id ?? null;
 }

@@ -21,7 +21,7 @@ export async function fetchActiveSplit(
 
 export async function generateSplit(userId: string): Promise<void> {
   const { error } = await supabase.functions.invoke("generate-split", {
-    body: { user_id: userId },
+    body: {},
   });
 
   if (error) throw error;

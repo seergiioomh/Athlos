@@ -16,10 +16,10 @@ import { SetLogCard } from "./components/SetLogCard";
 import { WorkoutHeader } from "./components/WorkoutHeader";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { DEV_USER_ID } from "@/lib/supabase";
 import { useSession, workoutKeys } from "./queries";
 import { WorkoutPlan } from "./types";
 import { useWorkoutSession } from "./useWorkoutSession";
+import { useUserId } from "@/features/auth/session";
 
 interface Props {
   plan: WorkoutPlan;
@@ -28,6 +28,8 @@ interface Props {
 }
 
 export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
+  const userId = useUserId()!;
+
   const { data: sessionId } = useSession(plan.id);
   const session = useWorkoutSession(plan, sessionId);
   const queryClient = useQueryClient();
@@ -42,7 +44,7 @@ export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
     // El plan pasa a estar hecho: quien lo tenga cacheado tiene que
     // enterarse, o Home seguiría ofreciendo empezarlo.
     queryClient.invalidateQueries({
-      queryKey: workoutKeys.plan(DEV_USER_ID!),
+      queryKey: workoutKeys.plan(userId),
     });
 
     // Terminar mueve la racha, los totales y la tira de la semana.

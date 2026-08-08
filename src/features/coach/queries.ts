@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { profileKeys } from "@/features/onboarding/queries";
 import { workoutKeys } from "@/features/workout/queries";
-import { DEV_USER_ID } from "@/lib/supabase";
 import {
   applyProposal,
   askCoach,
@@ -12,24 +11,29 @@ import {
   ProposalStatus,
   setProposalStatus,
 } from "@/services/coach";
+import { useUserId } from "@/features/auth/session";
 
 export const coachKeys = {
   messages: (userId: string) => ["coach", "messages", userId] as const,
 };
 
 export function useCoachMessages() {
+  const userId = useUserId()!;
+
   return useQuery({
-    queryKey: coachKeys.messages(DEV_USER_ID!),
-    queryFn: () => fetchMessages(DEV_USER_ID!),
+    queryKey: coachKeys.messages(userId),
+    queryFn: () => fetchMessages(userId),
   });
 }
 
 export function useAskCoach() {
+  const userId = useUserId()!;
+
   const queryClient = useQueryClient();
-  const key = coachKeys.messages(DEV_USER_ID!);
+  const key = coachKeys.messages(userId);
 
   return useMutation({
-    mutationFn: (message: string) => askCoach(DEV_USER_ID!, message),
+    mutationFn: (message: string) => askCoach(userId, message),
 
     // Tu mensaje aparece al instante. Esperar a que responda la IA para
     // verlo escrito hace que el chat se sienta roto.
@@ -75,6 +79,8 @@ export function useAskCoach() {
  * se puede reintentar.
  */
 export function useResolveProposal() {
+  const userId = useUserId()!;
+
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -88,7 +94,7 @@ export function useResolveProposal() {
       status: ProposalStatus;
     }) => {
       if (status === "aplicada") {
-        await applyProposal(DEV_USER_ID!, proposal);
+        await applyProposal(userId, proposal);
       }
 
       await setProposalStatus(messageId, status);
@@ -96,7 +102,7 @@ export function useResolveProposal() {
 
     onSuccess: (_result, { proposal, status }) => {
       queryClient.invalidateQueries({
-        queryKey: coachKeys.messages(DEV_USER_ID!),
+        queryKey: coachKeys.messages(userId),
       });
 
       if (status !== "aplicada") return;
@@ -105,13 +111,13 @@ export function useResolveProposal() {
       // perfil si lo que cambió fueron las limitaciones.
       if (proposal.kind === "actualizar_limitaciones") {
         queryClient.invalidateQueries({
-          queryKey: profileKeys.profile(DEV_USER_ID!),
+          queryKey: profileKeys.profile(userId),
         });
       } else if (proposal.kind === "cambiar_reparto_semanal") {
         queryClient.invalidateQueries({ queryKey: ["split"] });
       } else {
         queryClient.invalidateQueries({
-          queryKey: workoutKeys.plan(DEV_USER_ID!),
+          queryKey: workoutKeys.plan(userId),
         });
       }
     },

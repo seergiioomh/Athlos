@@ -194,18 +194,15 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Falta el secreto ANTHROPIC_API_KEY" }, 500);
   }
 
-  let userId: string;
   let message: string;
 
   try {
     const body = await req.json();
-    userId = body.user_id;
     message = (body.message ?? "").trim();
   } catch {
     return json({ error: "Cuerpo JSON inválido" }, 400);
   }
 
-  if (!userId) return json({ error: "Falta user_id" }, 400);
   if (!message) return json({ error: "El mensaje está vacío" }, 400);
   if (message.length > 2000) {
     return json({ error: "El mensaje es demasiado largo" }, 400);
@@ -215,6 +212,10 @@ Deno.serve(async (req: Request) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  const userId = await userFromRequest(req, supabase);
+
+  if (!userId) return json({ error: "Sesión no válida" }, 401);
 
   // Limpieza antes de leer: lo caducado no debe entrar en el contexto ni
   // seguir ocupando la tabla. Es una consulta barata sobre un índice.
@@ -507,4 +508,22 @@ function yearsSince(iso: string) {
   if (beforeBirthday) years -= 1;
 
   return years;
+}
+
+/**
+ * Saca el usuario del token que envía la app, en lugar de creerse el id que
+ * venga en el cuerpo. Con el `user_id` en el cuerpo, cualquiera con la clave
+ * anon —que va dentro del bundle— podía pedir datos de otra persona.
+ */
+async function userFromRequest(
+  req: Request,
+  supabase: ReturnType<typeof createClient>,
+): Promise<string | null> {
+  const header = req.headers.get("Authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+
+  const { data, error } = await supabase.auth.getUser(header.slice(7));
+  if (error) return null;
+
+  return data.user?.id ?? null;
 }

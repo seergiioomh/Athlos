@@ -26,7 +26,22 @@
       "mcp__visualize__show_widget",
       "Bash(node -e \"const a=require\\('./app.json'\\).expo; console.log\\('ios:', a.ios.bundleIdentifier\\); console.log\\('android:', a.android.package\\)\")",
       "Bash(npx eas-cli@latest --version)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(python -X utf8 -)",
+      "Bash(timeout 90 npx eas-cli build:list --platform ios --limit 3 --non-interactive)",
+      "Bash(timeout 60 npx eas-cli build:view b2730ac4-29f8-4999-b7fc-01d1b6790b84 --non-interactive)",
+      "Bash(timeout 60 npx eas-cli build:view b2730ac4-29f8-4999-b7fc-01d1b6790b84)",
+      "Bash(node -e \"console.log\\('expo-updates:', require\\('./package.json'\\).dependencies['expo-updates']\\)\")",
+      "Bash(timeout 90 npx eas-cli build:list --platform ios --limit 4)",
+      "Bash(timeout 90 npx eas-cli build:view 51fdd0d3-fe46-465f-8ab3-5f63eceff056)",
+      "Bash(timeout 180 npx expo-updates fingerprint:generate)",
+      "Bash(timeout 240 npx expo-updates fingerprint:generate --platform ios)",
+      "Bash(node -e \"console.log\\('async-storage:', require\\('./package.json'\\).dependencies['@react-native-async-storage/async-storage']\\)\")",
+      "Bash(timeout 90 npx eas-cli build:list --platform ios --limit 3)",
+      "Bash(timeout 90 npx eas-cli update:list --branch production --limit 3)",
+      "Bash(timeout 60 npx eas-cli submit --help)",
+      "Bash(gh auth *)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { homeKeys } from "@/features/home/queries";
 import { useProfile } from "@/features/onboarding/queries";
-import { DEV_USER_ID } from "@/lib/supabase";
 import { recordWeight } from "@/services/home";
 import {
   fetchExerciseProgress,
@@ -10,6 +9,7 @@ import {
   fetchStreak,
   fetchWeightRange,
 } from "@/services/progress";
+import { useUserId } from "@/features/auth/session";
 
 export const progressKeys = {
   summary: (userId: string) => ["progress", "summary", userId] as const,
@@ -30,46 +30,56 @@ export const maxGapFor = (daysPerWeek: number | null) =>
   Math.max(2, Math.ceil(7 / (daysPerWeek || 3)));
 
 export function useProgressSummary() {
+  const userId = useUserId()!;
+
   return useQuery({
-    queryKey: progressKeys.summary(DEV_USER_ID!),
-    queryFn: () => fetchProgressSummary(DEV_USER_ID!),
+    queryKey: progressKeys.summary(userId),
+    queryFn: () => fetchProgressSummary(userId),
   });
 }
 
 export function useExerciseProgress() {
+  const userId = useUserId()!;
+
   return useQuery({
-    queryKey: progressKeys.exercises(DEV_USER_ID!),
-    queryFn: () => fetchExerciseProgress(DEV_USER_ID!),
+    queryKey: progressKeys.exercises(userId),
+    queryFn: () => fetchExerciseProgress(userId),
   });
 }
 
 export function useStreak() {
+  const userId = useUserId()!;
+
   const { data: profile } = useProfile();
   const maxGap = maxGapFor(profile?.days_per_week ?? null);
 
   return useQuery({
-    queryKey: progressKeys.streak(DEV_USER_ID!, maxGap),
-    queryFn: () => fetchStreak(DEV_USER_ID!, maxGap),
+    queryKey: progressKeys.streak(userId, maxGap),
+    queryFn: () => fetchStreak(userId, maxGap),
   });
 }
 
 export function useWeightRange(days: number) {
+  const userId = useUserId()!;
+
   return useQuery({
-    queryKey: progressKeys.weight(DEV_USER_ID!, days),
-    queryFn: () => fetchWeightRange(DEV_USER_ID!, days),
+    queryKey: progressKeys.weight(userId, days),
+    queryFn: () => fetchWeightRange(userId, days),
   });
 }
 
 export function useRecordWeight() {
+  const userId = useUserId()!;
+
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (weightKg: number) => recordWeight(DEV_USER_ID!, weightKg),
+    mutationFn: (weightKg: number) => recordWeight(userId, weightKg),
     onSuccess: () => {
       // El peso sale en dos sitios: aquí y en la tarjeta de Home.
       queryClient.invalidateQueries({ queryKey: ["progress", "weight"] });
       queryClient.invalidateQueries({
-        queryKey: homeKeys.weight(DEV_USER_ID!),
+        queryKey: homeKeys.weight(userId),
       });
     },
   });

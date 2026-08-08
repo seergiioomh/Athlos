@@ -91,7 +91,7 @@ export async function askCoach(
   message: string
 ): Promise<string> {
   const { data, error } = await supabase.functions.invoke("coach-chat", {
-    body: { user_id: userId, message },
+    body: { message },
   });
 
   if (error) throw error;

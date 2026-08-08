@@ -1,12 +1,27 @@
 import { DarkTheme, ThemeProvider } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import "react-native-reanimated";
 
-import { useProfile } from "@/features/onboarding/queries";
+import { useInitSession, useSession } from "@/features/auth/session";
 import { HomeColors } from "@/features/home/home-theme";
+import { useProfile } from "@/features/onboarding/queries";
+import { configError } from "@/lib/supabase";
+
+// La pantalla de carga la controlamos nosotros: así nunca se queda congelada
+// esperando a que algo termine.
+SplashScreen.preventAutoHideAsync();
+
+/**
+ * Tope de espera. Si una consulta se queda colgada —sin red, DNS lento,
+ * servidor caído— la app avanza igualmente en vez de dejar al usuario
+ * mirando un indicador para siempre.
+ */
+const STARTUP_TIMEOUT_MS = 8000;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,29 +46,58 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const { data: profile, isPending } = useProfile();
+  useInitSession();
 
-  // Hasta saber si hay perfil no montamos nada: si no, se vería un
-  // parpadeo de la app antes de saltar a la bienvenida.
-  if (isPending) {
+  const { status } = useSession();
+  const { data: profile, isPending: profilePending } = useProfile();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Se retira en cuanto hay algo que pintar. Si esperásemos a tener los datos,
+  // un fallo de red dejaría la app en la pantalla de inicio de Apple sin
+  // ninguna pista de qué pasa.
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
+
+  useEffect(() => {
+    const id = setTimeout(() => setTimedOut(true), STARTUP_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, []);
+
+  // Sin configuración no hay nada que hacer, y da igual esperar: mejor
+  // decirlo que quedarse cargando para siempre.
+  if (configError) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={HomeColors.primary} />
-      </View>
+      <Loading title="No se pudo iniciar" error={configError} spinner={false} />
     );
   }
 
-  // Si el perfil no se puede leer (sin red, por ejemplo) dejamos pasar a la
-  // app en vez de encerrar al usuario en el formulario.
-  const needsOnboarding = profile !== undefined && !profile?.onboarded_at;
+  if (status === "loading" && !timedOut) {
+    return <Loading text="Abriendo tu sesión…" />;
+  }
+
+  const signedIn = status === "signed-in";
+
+  if (signedIn && profilePending && !timedOut) {
+    return <Loading text="Cargando tu perfil…" />;
+  }
+
+  // Con sesión pero sin bienvenida terminada, al formulario. Si el perfil no
+  // se pudo leer dejamos pasar: un fallo de red no debe encerrar a nadie.
+  const needsOnboarding =
+    signedIn && profile !== undefined && !profile?.onboarded_at;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="auth" />
+      </Stack.Protected>
+
       <Stack.Protected guard={needsOnboarding}>
         <Stack.Screen name="onboarding" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!needsOnboarding}>
+      <Stack.Protected guard={signedIn && !needsOnboarding}>
         <Stack.Screen name="(tabs)" />
         {/* Se abren encima de las pestañas, no son pestañas más. */}
         <Stack.Screen name="weekly-plan" />
@@ -63,11 +107,49 @@ function RootNavigator() {
   );
 }
 
+function Loading({
+  text,
+  title,
+  error,
+  spinner = true,
+}: {
+  text?: string;
+  title?: string;
+  error?: string;
+  spinner?: boolean;
+}) {
+  return (
+    <View style={styles.loading}>
+      {spinner && <ActivityIndicator color={HomeColors.primary} />}
+      {title && <Text style={styles.loadingTitle}>{title}</Text>}
+      {text && <Text style={styles.loadingText}>{text}</Text>}
+      {error && <Text style={styles.loadingError}>{error}</Text>}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 40,
+    gap: 12,
     backgroundColor: HomeColors.background,
+  },
+
+  loadingTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: HomeColors.text,
+  },
+
+  loadingText: { fontSize: 13, color: HomeColors.textSecondary },
+
+  loadingError: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: HomeColors.errorText,
+    textAlign: "center",
   },
 });
