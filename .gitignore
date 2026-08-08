@@ -34,6 +34,10 @@ yarn-error.*
 .env
 .env*.local
 
+# Caché local del CLI de Supabase. `pooler-url` guarda la contraseña de la base
+# de datos dentro de la cadena de conexión, así que esto no se versiona nunca.
+supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 

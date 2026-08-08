@@ -49,7 +49,11 @@
       "Bash(git -C athlos remote -v)",
       "Bash(timeout 30 curl -s -o /dev/null -w \"%{http_code}\" https://api.github.com/repos/seergiioomh/athlos)",
       "Bash(timeout 30 curl -s https://api.github.com/repos/seergiioomh/athlos)",
-      "Bash(git commit -q -m ' *)"
+      "Bash(git commit -q -m ' *)",
+      "Bash(npx eas-cli *)",
+      "Bash(npx expo-updates *)",
+      "Bash(python -c \"import sys,json; print\\(json.load\\(sys.stdin\\)['hash']\\)\")",
+      "Bash(grep -o '\"hash\":\"[a-f0-9]\\\\{40\\\\}\"}$')"
     ]
   }
 }

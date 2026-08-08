@@ -10,9 +10,21 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+/**
+ * Una clave con formato imposible es tan inútil como no tener ninguna, pero se
+ * nota mucho más tarde: la app arranca, pinta el acceso, y solo al registrarse
+ * responde «Invalid API key» desde el servidor.
+ *
+ * Pasó de verdad, con el marcador `TU_CLAVE_ANON` subido a EAS tal cual.
+ */
+const looksLikeKey =
+  supabaseAnonKey?.includes(".") ||
+  supabaseAnonKey?.startsWith("sb_publishable_");
+
 const missing = [
   !supabaseUrl && "EXPO_PUBLIC_SUPABASE_URL",
   !supabaseAnonKey && "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+  supabaseAnonKey && !looksLikeKey && "EXPO_PUBLIC_SUPABASE_ANON_KEY (no es una clave válida)",
 ].filter(Boolean) as string[];
 
 /**
