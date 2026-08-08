@@ -55,7 +55,8 @@
       "Bash(python -c \"import sys,json; print\\(json.load\\(sys.stdin\\)['hash']\\)\")",
       "Bash(grep -o '\"hash\":\"[a-f0-9]\\\\{40\\\\}\"}$')",
       "Bash(python -c \"import sys,json; print\\('huella actual:', json.load\\(sys.stdin\\)['hash']\\)\")",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(grep -inE \"eyJ[A-Za-z0-9]{10,}|sk-ant|service_role|password|contrase.a *[:=]|postgresql://\")"
     ]
   }
 }

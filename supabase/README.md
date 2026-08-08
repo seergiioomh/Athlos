@@ -46,7 +46,12 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0011_seed_dev_weight.sql` | Opcional: cinco pesajes de prueba |
 | `0013_seed_dev_streak.sql` | Opcional: sesiones para probar la racha |
 | `0018_reset_training_data.sql` | Borra tus datos de entrenamiento |
-| `0025_remove_dev_user.sql` | Elimina la cuenta de desarrollo y todo lo suyo |
+| `0025_remove_dev_user.sql` | **Obsoleto, no ejecutar.** Ver abajo |
+
+La cuenta que `0025` iba a borrar estaba creada con el correo real del dueño de
+la app, así que al activar el login pasó a ser su cuenta de usuario, con sus
+entrenamientos dentro. El archivo se conserva como registro y con el `delete`
+comentado.
 
 Los entrenamientos importados a mano viven en `supabase/imports/`, un archivo
 por día.

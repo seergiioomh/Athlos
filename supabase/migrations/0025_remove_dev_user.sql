@@ -1,3 +1,22 @@
+-- ╔══════════════════════════════════════════════════════════════════════╗
+-- ║  NO EJECUTAR. Quedó obsoleto sin llegar a usarse.                    ║
+-- ╚══════════════════════════════════════════════════════════════════════╝
+--
+-- La cuenta que este archivo borra resultó estar creada con el correo real
+-- del dueño de la app, así que al activar el login se convirtió sin más en
+-- su cuenta de usuario: es con la que entra, y guarda los entrenamientos
+-- importados de sus notas, los pesajes y el plan.
+--
+-- Ejecutarlo hoy no limpia nada de desarrollo: le borra su cuenta y, en
+-- cascada, todos sus datos. Se conserva solo como registro de la etapa
+-- anterior.
+--
+-- Para vaciar los datos de entrenamiento sin tocar la cuenta está
+-- `0018_reset_training_data.sql`.
+--
+-- ----------------------------------------------------------------------
+-- Contenido original, a partir de aquí:
+--
 -- Elimina el usuario de desarrollo y todo lo suyo.
 --
 -- Se ejecuta cuando la app con login ya funciona y no queda nada que
@@ -12,8 +31,11 @@
 --
 -- ⚠️ No hay vuelta atrás.
 
-delete from auth.users
-where id = 'f4707a48-313f-4fe6-9ee2-0a8d09973167';
+-- Comentado a propósito: ese id es hoy la cuenta real del usuario.
+-- Si algún día hiciera falta de verdad, descomenta sabiendo lo que borras.
+--
+-- delete from auth.users
+-- where id = 'f4707a48-313f-4fe6-9ee2-0a8d09973167';
 
 -- Comprobación: debe devolver cero filas en todas.
 -- select

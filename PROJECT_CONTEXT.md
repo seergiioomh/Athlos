@@ -300,6 +300,17 @@ Pendiente:
 Hecho, por si aparece en el historial y confunde: la contraseña de la base de
 datos ya se cambió, y `EXPO_PUBLIC_DEV_USER_ID` ya no está en EAS.
 
+### La «cuenta de desarrollo» es la cuenta real
+
+`f4707a48-313f-4fe6-9ee2-0a8d09973167` no es un usuario ficticio: se creó con
+el correo real del dueño de la app, así que al activar el login se convirtió en
+su cuenta normal. Es con la que entra, y guarda los entrenamientos importados
+de sus notas, los pesajes y el plan.
+
+Por eso `0025_remove_dev_user.sql` **no se ejecuta nunca** — está obsoleto y con
+el `delete` comentado. Para vaciar entrenamientos sin tocar la cuenta,
+`0018_reset_training_data.sql`.
+
 ### Las variables de EAS no son el `.env`
 
 Son dos sitios distintos y no se sincronizan solos. El `.env` local vale para
