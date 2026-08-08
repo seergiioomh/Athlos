@@ -41,7 +41,15 @@
       "Bash(timeout 90 npx eas-cli update:list --branch production --limit 3)",
       "Bash(timeout 60 npx eas-cli submit --help)",
       "Bash(gh auth *)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(git add *)",
+      "Bash(xargs grep -l \"Maquinon\\\\|sk-ant-[A-Za-z0-9]\")",
+      "Bash(git reset *)",
+      "Bash(git -C athlos log --oneline)",
+      "Bash(git -C athlos remote -v)",
+      "Bash(timeout 30 curl -s -o /dev/null -w \"%{http_code}\" https://api.github.com/repos/seergiioomh/athlos)",
+      "Bash(timeout 30 curl -s https://api.github.com/repos/seergiioomh/athlos)",
+      "Bash(git commit -q -m ' *)"
     ]
   }
 }
