@@ -368,9 +368,10 @@ async function loadContext(
     .from("profiles")
     .select(
       `display_name, birth_date, sex, height_cm, weight_kg, target_weight_kg,
-       goal, focus_areas, experience, technique_level, days_per_week,
-       training_days, session_minutes, equipment, daily_activity, sleep_hours,
-       cardio, limitations, avoid_exercises`,
+       goal, goal_notes, focus_areas, experience, technique_level,
+       days_per_week, training_days, session_minutes, equipment, sport,
+       sport_days, daily_activity, sleep_hours, cardio, limitations,
+       avoid_exercises`,
     )
     .eq("id", userId)
     .maybeSingle();
@@ -431,12 +432,21 @@ async function loadContext(
         profile.weight_kg && `- Peso: ${profile.weight_kg} kg`,
         profile.target_weight_kg && `- Peso objetivo: ${profile.target_weight_kg} kg`,
         profile.goal && `- Objetivo: ${profile.goal}`,
+        // Lo escribió él. Aquí vale doble: el coach puede responder con sus
+        // mismas palabras en vez de con una etiqueta.
+        profile.goal_notes &&
+          `- Lo que quiere conseguir, en sus palabras: "${profile.goal_notes}"`,
         areas?.length && `- Quiere priorizar: ${areas.join(", ")}`,
         profile.experience && `- Experiencia: ${profile.experience}`,
         profile.technique_level && `- Técnica en los básicos: ${profile.technique_level}`,
         days?.length && `- Días que entrena: ${days.join(", ")}`,
         profile.session_minutes && `- Minutos por sesión: ${profile.session_minutes}`,
         profile.equipment && `- Material: ${profile.equipment}`,
+        profile.sport &&
+          profile.sport !== "ninguno" &&
+          `- Practica ${profile.sport}${
+            profile.sport_days ? ` ${profile.sport_days} días por semana` : ""
+          } además del gimnasio`,
         profile.cardio && `- Cardio: ${profile.cardio}`,
         profile.daily_activity && `- Actividad diaria: ${profile.daily_activity}`,
         profile.sleep_hours && `- Horas de sueño: ${profile.sleep_hours}`,

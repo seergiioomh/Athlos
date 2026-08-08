@@ -23,8 +23,12 @@ import {
   experienceOptions,
   focusAreaOptions,
   goalOptions,
+  sessionMinutesFromDb,
   sessionMinutesOptions,
+  sessionMinutesToDb,
   sexOptions,
+  sportDaysOptions,
+  sportOptions,
   sleepOptions,
   techniqueOptions,
   weekdayOptions,
@@ -68,8 +72,17 @@ export function EditProfileSheet({
 
   if (!section) return null;
 
+  /**
+   * El valor que se está editando: el del borrador si se ha tocado, y el
+   * guardado si no.
+   *
+   * Se pregunta por la *presencia* de la clave, no por su valor. Con `??` un
+   * null del borrador caía al valor del perfil, así que vaciar un campo era
+   * indistinguible de no haberlo tocado: el control volvía solo a lo guardado y
+   * parecía que no respondía al pulsarlo.
+   */
   const value = <K extends keyof ProfileRow>(key: K): ProfileRow[K] =>
-    (draft[key] ?? profile[key]) as ProfileRow[K];
+    (key in draft ? draft[key] : profile[key]) as ProfileRow[K];
 
   const set = <K extends keyof ProfileRow>(key: K, next: ProfileRow[K]) => {
     setDraft((current) => ({ ...current, [key]: next }));
@@ -86,7 +99,30 @@ export function EditProfileSheet({
         return setInvalid("La fecha va como AAAA-MM-DD.");
       }
 
-      const born = new Date(birthDate);
+      const [year, month, day] = birthDate.split("-").map(Number);
+
+      // En UTC a propósito: con hora local, un nacimiento a final de mes se
+      // desplaza un día según el huso y la comprobación de abajo fallaría por
+      // una fecha que sí existe.
+      const born = new Date(Date.UTC(year, month - 1, day));
+
+      /**
+       * `new Date` no rechaza fechas imposibles: convierte el 31 de febrero en
+       * el 3 de marzo sin decir nada. Al comparar los componentes de vuelta,
+       * una fecha que no existe deja de coincidir consigo misma.
+       *
+       * Sin esto, Postgres la rechazaba más tarde con un error de fecha
+       * inválida, que en pantalla se lee como un mensaje incomprensible.
+       */
+      const existe =
+        born.getUTCFullYear() === year &&
+        born.getUTCMonth() === month - 1 &&
+        born.getUTCDate() === day;
+
+      if (!existe) {
+        return setInvalid("Esa fecha no existe. Comprueba el día y el mes.");
+      }
+
       const years = (Date.now() - born.getTime()) / 31_557_600_000;
 
       if (!Number.isFinite(years) || years < 14 || years > 100) {
@@ -108,7 +144,31 @@ export function EditProfileSheet({
       return;
     }
 
-    onSave(draft);
+    // `days_per_week` se deriva de los días marcados, y la columna exige entre
+    // 1 y 7. Quedarse sin ninguno mandaría un 0 y rompería al guardar, así que
+    // se corta aquí y con un mensaje que se entiende.
+    if (
+      "training_days" in draft &&
+      (value("training_days") ?? []).length === 0
+    ) {
+      return setInvalid("Elige al menos un día de entrenamiento.");
+    }
+
+    // Mismo criterio que la bienvenida: un deporte sin días es media
+    // respuesta, y al prompt le llega peor que no decir nada.
+    const sport = value("sport");
+    if (sport && sport !== "ninguno" && !value("sport_days")) {
+      return setInvalid("Elige cuántos días a la semana practicas ese deporte.");
+    }
+
+    onSave({
+      ...draft,
+      // Una cadena vacía y un nulo significan lo mismo aquí, y guardar la
+      // cadena obliga a comprobar las dos cosas en todos los sitios.
+      ...("goal_notes" in draft
+        ? { goal_notes: String(draft.goal_notes ?? "").trim() || null }
+        : {}),
+    });
   };
 
   return (
@@ -213,6 +273,21 @@ export function EditProfileSheet({
                   />
                 </Field>
 
+                {/* La bienvenida se pasa una sola vez: sin esto, quien ya
+                    tenía cuenta antes del rediseño no podría escribirlo
+                    nunca. */}
+                <Field label="Qué quieres conseguir">
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={String(value("goal_notes") ?? "")}
+                    onChangeText={(text) => set("goal_notes", text)}
+                    placeholder="Quiero ganar músculo y mejorar mi velocidad para el fútbol"
+                    placeholderTextColor={HomeColors.textTertiary}
+                    multiline
+                    maxLength={500}
+                  />
+                </Field>
+
                 <Field label="Experiencia">
                   <ChipGroup
                     options={experienceOptions}
@@ -259,10 +334,36 @@ export function EditProfileSheet({
                 <Field label="Minutos por sesión">
                   <ChipGroup
                     options={sessionMinutesOptions}
-                    value={value("session_minutes") ?? undefined}
-                    onChange={(next) => set("session_minutes", next)}
+                    // 0 en pantalla, null en la base: hay que traducir en los
+                    // dos sentidos o "Me da igual" no se guarda ni se relee.
+                    value={sessionMinutesFromDb(value("session_minutes"))}
+                    onChange={(next) =>
+                      set("session_minutes", sessionMinutesToDb(next))
+                    }
                   />
                 </Field>
+
+                <Field label="Otro deporte">
+                  <ChipGroup
+                    options={sportOptions}
+                    value={value("sport") ?? undefined}
+                    onChange={(next) => {
+                      set("sport", next);
+                      // Los días del deporte anterior no valen para el nuevo.
+                      if (next === "ninguno") set("sport_days", null);
+                    }}
+                  />
+                </Field>
+
+                {Boolean(value("sport")) && value("sport") !== "ninguno" && (
+                  <Field label="Días de deporte a la semana">
+                    <ChipGroup
+                      options={sportDaysOptions}
+                      value={value("sport_days") ?? undefined}
+                      onChange={(next) => set("sport_days", next)}
+                    />
+                  </Field>
+                )}
 
                 <Field label="Cardio">
                   <ChipGroup

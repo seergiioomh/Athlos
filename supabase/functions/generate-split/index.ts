@@ -100,10 +100,16 @@ Deno.serve(async (req: Request) => {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      `display_name, birth_date, sex, goal, focus_areas, experience,
-       technique_level, days_per_week, training_days, session_minutes,
-       equipment, daily_activity, sleep_hours, cardio, limitations,
-       avoid_exercises`,
+      // El perfil viaja entero al prompt como JSON, así que ampliar esta
+      // lista es lo único que hace falta para que el modelo lo vea.
+      //
+      // `sport` pesa especialmente aquí: quien juega al fútbol dos días llega
+      // con las piernas cargadas, y el reparto debería tenerlo en cuenta al
+      // repartir la semana.
+      `display_name, birth_date, sex, goal, goal_notes, focus_areas,
+       experience, technique_level, days_per_week, training_days,
+       session_minutes, equipment, sport, sport_days, daily_activity,
+       sleep_hours, cardio, limitations, avoid_exercises`,
     )
     .eq("id", userId)
     .maybeSingle();

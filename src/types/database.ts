@@ -8,7 +8,26 @@
  */
 
 export type Sex = "hombre" | "mujer" | "otro";
-export type Goal = "perder-grasa" | "ganar-musculo" | "fuerza" | "mantener";
+/**
+ * `mantener` ya no se ofrece en la bienvenida, pero sigue siendo un valor
+ * válido: hay perfiles guardados con él desde antes del rediseño.
+ */
+export type Goal =
+  | "ganar-musculo"
+  | "perder-grasa"
+  | "fuerza"
+  | "rendimiento"
+  | "condicion-fisica"
+  | "recomposicion"
+  | "mantener";
+
+export type Sport =
+  | "ninguno"
+  | "futbol"
+  | "running"
+  | "baloncesto"
+  | "ciclismo"
+  | "otro";
 export type Experience = "principiante" | "intermedio" | "avanzado";
 export type Equipment = "gimnasio" | "casa" | "corporal";
 export type Weekday = "lun" | "mar" | "mie" | "jue" | "vie" | "sab" | "dom";
@@ -49,6 +68,11 @@ export interface ProfileRow {
   weight_kg: number | null;
   target_weight_kg: number | null;
   goal: Goal | null;
+  /** Lo que el usuario escribe con sus palabras. Tope de 500 en la base. */
+  goal_notes: string | null;
+  sport: Sport | null;
+  /** Solo tiene sentido si `sport` no es 'ninguno'. */
+  sport_days: number | null;
   focus_areas: FocusArea[] | null;
   experience: Experience | null;
   technique_level: TechniqueLevel | null;

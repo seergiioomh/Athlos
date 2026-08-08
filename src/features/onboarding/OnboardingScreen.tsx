@@ -17,16 +17,14 @@ import { HomeColors } from "@/features/home/home-theme";
 import { errorMessage } from "@/utils/errors";
 import { useSaveProfile } from "./queries";
 import {
-  cardioOptions,
-  dailyActivityOptions,
   equipmentOptions,
   experienceOptions,
-  focusAreaOptions,
   goalOptions,
   onboardingSchema,
   sessionMinutesOptions,
   sexOptions,
-  sleepOptions,
+  sportDaysOptions,
+  sportOptions,
   techniqueOptions,
   weekdayOptions,
 } from "./schema";
@@ -36,11 +34,25 @@ import {
 type Draft = Record<string, unknown>;
 
 /**
- * Cuatro pasos en vez de una pantalla larga. Cada uno agrupa preguntas que se
+ * Siete pasos cortos en vez de cuatro densos. Cada uno agrupa preguntas que se
  * responden con la misma cabeza, y `fields` dice qué validar antes de avanzar:
  * así los errores salen en el paso donde está el campo, no al final.
+ *
+ * Un campo que no aparezca en ningún `fields` es una trampa: al enviar, el
+ * formulario busca en qué paso vive el que falla y, si no lo encuentra, deja al
+ * usuario atascado con un error que no ve. Si añades una pregunta, añádela aquí.
  */
 const STEPS = [
+  {
+    title: "Tu objetivo",
+    subtitle: "Por dónde quieres empezar.",
+    fields: ["goal"],
+  },
+  {
+    title: "Qué quieres conseguir",
+    subtitle: "Con tus palabras. Es lo que más nos ayuda a acertar.",
+    fields: ["goalNotes"],
+  },
   {
     title: "Sobre ti",
     subtitle: "Lo básico para calibrar cargas y progresión.",
@@ -56,26 +68,47 @@ const STEPS = [
     ],
   },
   {
-    title: "Tu objetivo",
-    subtitle: "Qué buscas y de dónde partes.",
-    fields: ["goal", "focusAreas", "experience", "techniqueLevel"],
+    title: "Tu experiencia",
+    subtitle: "Para ajustar la dificultad desde el primer día.",
+    fields: ["experience", "techniqueLevel"],
   },
   {
     title: "Tu disponibilidad",
     subtitle: "Cuándo, cuánto tiempo y con qué material.",
-    fields: ["trainingDays", "sessionMinutes", "equipment", "cardio"],
+    fields: ["trainingDays", "sessionMinutes", "equipment"],
   },
   {
-    title: "Descanso y salud",
-    subtitle: "Lo que condiciona cuánto puedes asimilar.",
-    fields: ["dailyActivity", "sleepHours", "limitations", "avoidExercises"],
+    title: "Otros deportes",
+    subtitle: "Lo que haces fuera del gimnasio también cansa.",
+    fields: ["sport", "sportDays"],
+  },
+  {
+    title: "Algo a tener en cuenta",
+    subtitle: "Lesiones, molestias o ejercicios que prefieras evitar.",
+    fields: ["limitations", "avoidExercises"],
   },
 ] as const;
 
+/**
+ * Opciones de la última pantalla. No se guardan: solo deciden qué campos de
+ * texto se enseñan, para no plantarle dos áreas vacías a quien no tiene nada
+ * que contar.
+ */
+const CONCERN_NONE = "nada";
+const CONCERN_INJURY = "lesion";
+const CONCERN_AVOID = "evitar";
+
+const concernOptions = [
+  { value: CONCERN_NONE, label: "No, nada" },
+  { value: CONCERN_INJURY, label: "Alguna lesión o molestia" },
+  { value: CONCERN_AVOID, label: "Ejercicios que no puedo hacer" },
+];
+
 export function OnboardingScreen() {
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<Draft>({ focusAreas: [], trainingDays: [] });
+  const [draft, setDraft] = useState<Draft>({ trainingDays: [] });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [concerns, setConcerns] = useState<string[]>([]);
 
   const save = useSaveProfile();
   const current = STEPS[step];
@@ -177,6 +210,34 @@ export function OnboardingScreen() {
           <Text style={styles.subtitle}>{current.subtitle}</Text>
 
           {step === 0 && (
+            <Field label="¿Cuál es tu objetivo?" error={errors.goal}>
+              <ChipGroup
+                options={goalOptions}
+                value={draft.goal as string | undefined}
+                onChange={(value) => set("goal", value)}
+              />
+            </Field>
+          )}
+
+          {step === 1 && (
+            <Field
+              label="Cuéntanos qué quieres conseguir"
+              hint="Opcional, pero es lo que más cambia tu plan."
+              error={errors.goalNotes}
+            >
+              <TextInput
+                style={[styles.input, styles.textArea, styles.textAreaTall]}
+                value={String(draft.goalNotes ?? "")}
+                onChangeText={(value) => set("goalNotes", value)}
+                placeholder="Quiero ganar músculo y mejorar mi velocidad para el fútbol. Entreno mejor por la mañana y el gimnasio me pilla lejos los fines de semana."
+                placeholderTextColor={HomeColors.textTertiary}
+                multiline
+                maxLength={500}
+              />
+            </Field>
+          )}
+
+          {step === 2 && (
             <>
               <Field label="¿Cómo te llamas?" error={errors.displayName}>
                 <TextInput
@@ -280,28 +341,8 @@ export function OnboardingScreen() {
             </>
           )}
 
-          {step === 1 && (
+          {step === 3 && (
             <>
-              <Field label="¿Cuál es tu objetivo?" error={errors.goal}>
-                <ChipGroup
-                  options={goalOptions}
-                  value={draft.goal as string | undefined}
-                  onChange={(value) => set("goal", value)}
-                />
-              </Field>
-
-              <Field
-                label="¿Qué quieres priorizar?"
-                hint="Opcional. Hasta cuatro."
-                error={errors.focusAreas}
-              >
-                <ChipMultiGroup
-                  options={focusAreaOptions}
-                  value={(draft.focusAreas as string[]) ?? []}
-                  onChange={(value) => set("focusAreas", value)}
-                />
-              </Field>
-
               <Field label="¿Cuánto llevas entrenando?" error={errors.experience}>
                 <ChipGroup
                   options={experienceOptions}
@@ -324,7 +365,7 @@ export function OnboardingScreen() {
             </>
           )}
 
-          {step === 2 && (
+          {step === 4 && (
             <>
               <Field
                 label="¿Qué días puedes entrenar?"
@@ -353,66 +394,115 @@ export function OnboardingScreen() {
                   onChange={(value) => set("equipment", value)}
                 />
               </Field>
-
-              <Field label="¿Haces cardio?" error={errors.cardio}>
-                <ChipGroup
-                  options={cardioOptions}
-                  value={draft.cardio as string | undefined}
-                  onChange={(value) => set("cardio", value)}
-                />
-              </Field>
             </>
           )}
 
-          {step === 3 && (
+          {step === 5 && (
             <>
-              <Field label="¿Cómo es tu día a día?" error={errors.dailyActivity}>
-                <ChipGroup
-                  options={dailyActivityOptions}
-                  value={draft.dailyActivity as string | undefined}
-                  onChange={(value) => set("dailyActivity", value)}
-                />
-              </Field>
-
-              <Field label="¿Cuánto duermes?" error={errors.sleepHours}>
-                <ChipGroup
-                  options={sleepOptions}
-                  value={draft.sleepHours as number | undefined}
-                  onChange={(value) => set("sleepHours", value)}
-                />
-              </Field>
-
               <Field
-                label="¿Alguna lesión o limitación?"
-                hint="Opcional. El coach lo tendrá en cuenta al elegir ejercicios."
-                error={errors.limitations}
+                label="¿Haces algún deporte además del gimnasio?"
+                error={errors.sport}
               >
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={String(draft.limitations ?? "")}
-                  onChangeText={(value) => set("limitations", value)}
-                  placeholder="Hombro derecho delicado, evito press militar"
-                  placeholderTextColor={HomeColors.textTertiary}
-                  multiline
-                  maxLength={300}
+                <ChipGroup
+                  options={sportOptions}
+                  value={draft.sport as string | undefined}
+                  onChange={(value) => {
+                    set("sport", value);
+                    // Los días de un deporte anterior no valen para el nuevo, y
+                    // dejarlos puestos guardaría una respuesta que nadie dio.
+                    if (value === "ninguno") set("sportDays", undefined);
+                  }}
                 />
               </Field>
 
-              <Field
-                label="¿Hay ejercicios que no quieras hacer?"
-                hint="Opcional. Por gusto o por historial."
-                error={errors.avoidExercises}
-              >
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={String(draft.avoidExercises ?? "")}
-                  onChangeText={(value) => set("avoidExercises", value)}
-                  placeholder="Burpees, peso muerto convencional"
-                  placeholderTextColor={HomeColors.textTertiary}
-                  multiline
-                  maxLength={300}
+              {/* Solo a quien practica algo. Preguntarle los días a quien ha
+                  dicho que no es una pregunta sin respuesta posible. */}
+              {Boolean(draft.sport) && draft.sport !== "ninguno" && (
+                <Field
+                  label="¿Cuántos días a la semana?"
+                  hint="Lo tendremos en cuenta para no duplicar carga."
+                  error={errors.sportDays}
+                >
+                  <ChipGroup
+                    options={sportDaysOptions}
+                    value={draft.sportDays as number | undefined}
+                    onChange={(value) => set("sportDays", value)}
+                  />
+                </Field>
+              )}
+            </>
+          )}
+
+          {step === 6 && (
+            <>
+              <Field label="¿Hay algo que debamos tener en cuenta?">
+                <ChipMultiGroup
+                  options={concernOptions}
+                  value={concerns}
+                  onChange={(value) => {
+                    // "No, nada" es excluyente: marcarlo borra lo escrito, y
+                    // marcar cualquier otra cosa lo desmarca a él.
+                    const añadido = value.find((v) => !concerns.includes(v));
+
+                    if (añadido === CONCERN_NONE) {
+                      setConcerns([CONCERN_NONE]);
+                      set("limitations", undefined);
+                      set("avoidExercises", undefined);
+                      return;
+                    }
+
+                    const siguiente = value.filter((v) => v !== CONCERN_NONE);
+
+                    // Desmarcar tiene que borrar lo escrito debajo. Si no, el
+                    // campo desaparece de la pantalla pero su texto se sigue
+                    // guardando, y el usuario cree haberlo retirado.
+                    if (!siguiente.includes(CONCERN_INJURY)) {
+                      set("limitations", undefined);
+                    }
+                    if (!siguiente.includes(CONCERN_AVOID)) {
+                      set("avoidExercises", undefined);
+                    }
+
+                    setConcerns(siguiente);
+                  }}
                 />
               </Field>
+
+              {concerns.includes(CONCERN_INJURY) && (
+                <Field
+                  label="Cuéntanos la lesión o molestia"
+                  hint="El coach lo tendrá en cuenta al elegir ejercicios."
+                  error={errors.limitations}
+                >
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={String(draft.limitations ?? "")}
+                    onChangeText={(value) => set("limitations", value)}
+                    placeholder="Hombro derecho delicado, evito press militar"
+                    placeholderTextColor={HomeColors.textTertiary}
+                    multiline
+                    maxLength={300}
+                  />
+                </Field>
+              )}
+
+              {concerns.includes(CONCERN_AVOID) && (
+                <Field
+                  label="¿Cuáles?"
+                  hint="Por gusto o por historial, da igual el motivo."
+                  error={errors.avoidExercises}
+                >
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={String(draft.avoidExercises ?? "")}
+                    onChangeText={(value) => set("avoidExercises", value)}
+                    placeholder="Burpees, peso muerto convencional"
+                    placeholderTextColor={HomeColors.textTertiary}
+                    multiline
+                    maxLength={300}
+                  />
+                </Field>
+              )}
             </>
           )}
 
@@ -582,6 +672,11 @@ const styles = StyleSheet.create({
   inputError: { borderColor: HomeColors.error },
 
   textArea: { height: 88, paddingTop: 14, textAlignVertical: "top" },
+
+  // La pantalla del campo libre no tiene nada más: el área ocupa el sitio que
+  // ocuparían las otras preguntas, y así se ve que se espera algo más que una
+  // línea suelta.
+  textAreaTall: { height: 170 },
 
   error: { fontSize: 12, color: HomeColors.errorText },
   saveError: { marginTop: 20, fontSize: 13, color: HomeColors.errorText },

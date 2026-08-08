@@ -8,6 +8,7 @@ import type {
   FocusArea,
   Goal,
   Sex,
+  Sport,
   TechniqueLevel,
   Weekday,
 } from "@/types/database";
@@ -67,9 +68,30 @@ export const onboardingSchema = z.object({
     .optional(),
 
   // ------------------------------------------------------------- objetivo
-  goal: z.enum(["perder-grasa", "ganar-musculo", "fuerza", "mantener"], {
-    error: "Elige un objetivo",
-  }),
+  // `mantener` sigue siendo válido en la base pero ya no se ofrece: lo cubren
+  // mejor `condicion-fisica` y `recomposicion`.
+  goal: z.enum(
+    [
+      "ganar-musculo",
+      "perder-grasa",
+      "fuerza",
+      "rendimiento",
+      "condicion-fisica",
+      "recomposicion",
+    ],
+    { error: "Elige un objetivo" }
+  ),
+
+  /**
+   * El campo libre. Opcional a propósito: obligar a escribir para poder pasar
+   * de pantalla convierte una invitación en un peaje, y lo que se saca de
+   * alguien con prisa por saltarse el formulario no vale nada.
+   */
+  goalNotes: z
+    .string()
+    .trim()
+    .max(500, "Intenta resumirlo un poco más")
+    .optional(),
 
   focusAreas: z
     .array(z.enum(["pecho", "espalda", "hombro", "brazo", "pierna", "gluteo", "core"]))
@@ -104,22 +126,47 @@ export const onboardingSchema = z.object({
     error: "Elige dónde entrenas",
   }),
 
-  cardio: z.enum(["ninguno", "poco", "moderado", "mucho"], {
-    error: "Elige una opción",
-  }),
+  // ------------------------------------------------------------- deporte
+  /**
+   * Lo que hace fuera del gimnasio. Condiciona la recuperación tanto como el
+   * sueño: quien juega al fútbol dos días ya mete carga de piernas que el plan
+   * no debería duplicar.
+   *
+   * Obligatorio: 'ninguno' es una respuesta, no una ausencia. Distinguir "no
+   * practica nada" de "no se le ha preguntado" importa para el prompt.
+   */
+  sport: z.enum(
+    ["ninguno", "futbol", "running", "baloncesto", "ciclismo", "otro"],
+    { error: "Elige una opción" }
+  ),
 
-  // --------------------------------------------------------------- salud
-  dailyActivity: z.enum(["sedentaria", "ligera", "activa", "muy-activa"], {
-    error: "Elige una opción",
-  }),
+  sportDays: z.coerce.number().int().min(1).max(7).optional(),
 
-  sleepHours: z.coerce
-    .number({ error: "Elige cuánto duermes" })
-    .min(3)
-    .max(14),
+  // ------------------------------------------------- ya no se preguntan
+  /**
+   * Estos cuatro salen de la bienvenida en el rediseño, pero siguen en la base
+   * y siguen viajando al prompt. Opcionales para que los perfiles que ya los
+   * tienen no se rompan y las cuentas nuevas puedan no traerlos.
+   */
+  cardio: z.enum(["ninguno", "poco", "moderado", "mucho"]).optional(),
+
+  dailyActivity: z
+    .enum(["sedentaria", "ligera", "activa", "muy-activa"])
+    .optional(),
+
+  sleepHours: z.coerce.number().min(3).max(14).optional(),
 
   limitations: z.string().trim().max(300, "Demasiado largo").optional(),
   avoidExercises: z.string().trim().max(300, "Demasiado largo").optional(),
+}).superRefine((values, ctx) => {
+  // Los días solo se piden a quien practica algo, así que solo se exigen ahí.
+  if (values.sport && values.sport !== "ninguno" && !values.sportDays) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Elige cuántos días a la semana",
+      path: ["sportDays"],
+    });
+  }
 });
 
 export type OnboardingValues = z.infer<typeof onboardingSchema>;
@@ -137,17 +184,25 @@ export const toProfileUpdate = (values: OnboardingValues) => ({
   weight_kg: values.weightKg,
   target_weight_kg: values.targetWeightKg ?? null,
   goal: values.goal,
+  goal_notes: values.goalNotes || null,
   focus_areas: values.focusAreas.length > 0 ? values.focusAreas : null,
   experience: values.experience,
   technique_level: values.techniqueLevel,
   training_days: values.trainingDays,
   // Se deriva de los días elegidos para que no puedan contradecirse.
   days_per_week: values.trainingDays.length,
-  session_minutes: values.sessionMinutes === 0 ? null : values.sessionMinutes,
+  session_minutes: sessionMinutesToDb(values.sessionMinutes),
   equipment: values.equipment,
-  cardio: values.cardio,
-  daily_activity: values.dailyActivity,
-  sleep_hours: values.sleepHours,
+  sport: values.sport ?? null,
+  // Sin deporte no hay días que guardar, aunque hubieran quedado en el
+  // borrador de una elección anterior.
+  sport_days:
+    values.sport && values.sport !== "ninguno"
+      ? (values.sportDays ?? null)
+      : null,
+  cardio: values.cardio ?? null,
+  daily_activity: values.dailyActivity ?? null,
+  sleep_hours: values.sleepHours ?? null,
   limitations: values.limitations || null,
   avoid_exercises: values.avoidExercises || null,
   onboarded_at: new Date().toISOString(),
@@ -161,12 +216,33 @@ export const sexOptions: { value: Sex; label: string }[] = [
   { value: "otro", label: "Otro" },
 ];
 
+/**
+ * `mantener` no está: lo cubren mejor `condicion-fisica` y `recomposicion`.
+ * Sigue siendo un valor válido en la base para los perfiles que ya lo tienen,
+ * solo que no se puede volver a elegir.
+ */
 export const goalOptions: { value: Goal; label: string }[] = [
-  { value: "perder-grasa", label: "Perder grasa" },
   { value: "ganar-musculo", label: "Ganar músculo" },
+  { value: "perder-grasa", label: "Perder grasa" },
   { value: "fuerza", label: "Ganar fuerza" },
-  { value: "mantener", label: "Mantenerme" },
+  { value: "rendimiento", label: "Mejorar rendimiento" },
+  { value: "condicion-fisica", label: "Mejorar condición física" },
+  { value: "recomposicion", label: "Recomposición corporal" },
 ];
+
+export const sportOptions: { value: Sport; label: string }[] = [
+  { value: "ninguno", label: "No" },
+  { value: "futbol", label: "Fútbol" },
+  { value: "running", label: "Running" },
+  { value: "baloncesto", label: "Baloncesto" },
+  { value: "ciclismo", label: "Ciclismo" },
+  { value: "otro", label: "Otro" },
+];
+
+export const sportDaysOptions = [1, 2, 3, 4, 5, 6, 7].map((days) => ({
+  value: days,
+  label: days === 1 ? "1 día" : `${days} días`,
+}));
 
 export const focusAreaOptions: { value: FocusArea; label: string }[] = [
   { value: "pecho", label: "Pecho" },
@@ -208,6 +284,22 @@ export const sessionMinutesOptions = [
   // 0 = sin límite declarado. Se guarda como null.
   { value: 0, label: "Me da igual" },
 ];
+
+/**
+ * La interfaz usa 0 para "me da igual"; la base guarda null.
+ *
+ * La columna tiene `check (session_minutes between 15 and 180)`. Un null pasa
+ * la comprobación —los nulos siempre la pasan— pero un 0 no, así que mandar el
+ * valor del chip sin traducir revienta al guardar.
+ *
+ * Están aquí, y no dentro de cada pantalla, porque el fallo vino justo de eso:
+ * la bienvenida traducía y la hoja de edición del perfil no.
+ */
+export const sessionMinutesToDb = (value: number | null | undefined) =>
+  value ? value : null;
+
+export const sessionMinutesFromDb = (value: number | null | undefined) =>
+  value ?? 0;
 
 export const equipmentOptions: { value: Equipment; label: string }[] = [
   { value: "gimnasio", label: "Gimnasio" },

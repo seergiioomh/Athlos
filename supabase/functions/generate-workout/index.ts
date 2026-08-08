@@ -186,9 +186,10 @@ Deno.serve(async (req: Request) => {
     .from("profiles")
     .select(
       `display_name, birth_date, sex, height_cm, weight_kg, target_weight_kg,
-       goal, focus_areas, experience, technique_level, days_per_week,
-       training_days, session_minutes, equipment, daily_activity, sleep_hours,
-       cardio, limitations, avoid_exercises`,
+       goal, goal_notes, focus_areas, experience, technique_level,
+       days_per_week, training_days, session_minutes, equipment, sport,
+       sport_days, daily_activity, sleep_hours, cardio, limitations,
+       avoid_exercises`,
     )
     .eq("id", userId)
     .maybeSingle();
@@ -427,6 +428,10 @@ function describeProfile(profile: Record<string, unknown>) {
     profile.weight_kg && `- Peso: ${profile.weight_kg} kg`,
     profile.target_weight_kg && `- Peso objetivo: ${profile.target_weight_kg} kg`,
     profile.goal && `- Objetivo: ${profile.goal}`,
+    // Escrito por el usuario con sus palabras. Va justo detrás de la etiqueta
+    // porque la matiza: "ganar músculo" no dice lo mismo que "ganar músculo y
+    // mejorar mi velocidad para el fútbol".
+    profile.goal_notes && `- Lo que quiere conseguir, en sus palabras: "${profile.goal_notes}"`,
     areas?.length && `- Quiere priorizar: ${areas.join(", ")}`,
     profile.experience && `- Experiencia: ${profile.experience}`,
     profile.technique_level &&
@@ -435,6 +440,13 @@ function describeProfile(profile: Record<string, unknown>) {
     profile.session_minutes &&
       `- Minutos por sesión: ${profile.session_minutes} (el volumen tiene que caber aquí)`,
     profile.equipment && `- Material: ${profile.equipment}`,
+    // El deporte de fuera ya mete carga que el plan no debería duplicar: quien
+    // juega al fútbol dos días llega con las piernas cargadas.
+    profile.sport &&
+      profile.sport !== "ninguno" &&
+      `- Practica ${profile.sport}${
+        profile.sport_days ? ` ${profile.sport_days} días por semana` : ""
+      } además del gimnasio`,
     profile.cardio && `- Cardio que hace: ${profile.cardio}`,
     profile.daily_activity && `- Actividad diaria fuera del gimnasio: ${profile.daily_activity}`,
     profile.sleep_hours && `- Horas de sueño: ${profile.sleep_hours}`,
