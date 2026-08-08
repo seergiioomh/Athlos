@@ -7,7 +7,12 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import "react-native-reanimated";
 
-import { useInitSession, useSession } from "@/features/auth/session";
+import { useRecoveryLink } from "@/features/auth/recovery-link";
+import {
+  useInitSession,
+  useRecovering,
+  useSession,
+} from "@/features/auth/session";
 import { HomeColors } from "@/features/home/home-theme";
 import { useProfile } from "@/features/onboarding/queries";
 import { configError } from "@/lib/supabase";
@@ -47,8 +52,10 @@ export default function RootLayout() {
 
 function RootNavigator() {
   useInitSession();
+  useRecoveryLink();
 
   const { status } = useSession();
+  const recovering = useRecovering();
   const { data: profile, isPending: profilePending } = useProfile();
   const [timedOut, setTimedOut] = useState(false);
 
@@ -76,7 +83,10 @@ function RootNavigator() {
     return <Loading text="Abriendo tu sesión…" />;
   }
 
-  const signedIn = status === "signed-in";
+  // Durante la recuperación hay sesión abierta —`verifyOtp` la abre al validar
+  // el código— pero el usuario aún no ha elegido contraseña nueva. Hasta que
+  // termine sigue siendo un visitante, no alguien que ha entrado.
+  const signedIn = status === "signed-in" && !recovering;
 
   if (signedIn && profilePending && !timedOut) {
     return <Loading text="Cargando tu perfil…" />;
@@ -91,6 +101,11 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="auth" />
+        {/* Destinos de los enlaces del correo. Van aquí y no en la zona
+            protegida porque durante la recuperación `signedIn` es falso a
+            propósito, y porque la confirmación se abre sin sesión previa. */}
+        <Stack.Screen name="reset-password" />
+        <Stack.Screen name="confirm" />
       </Stack.Protected>
 
       <Stack.Protected guard={needsOnboarding}>
