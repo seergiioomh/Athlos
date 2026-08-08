@@ -76,14 +76,57 @@ export async function fetchMessages(
 
   if (error) throw error;
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    role: row.role,
-    content: row.content,
-    createdAt: row.created_at,
-    proposal: (row.proposal as CoachProposal | null) ?? null,
-    proposalStatus: (row.proposal_status as ProposalStatus | null) ?? null,
-  }));
+  return (data ?? []).map((row) => {
+    const proposal = sanearPropuesta(row.proposal);
+
+    return {
+      id: row.id,
+      role: row.role,
+      content: row.content,
+      createdAt: row.created_at,
+      proposal,
+      // Sin propuesta utilizable no hay nada que aplicar ni descartar, y el
+      // estado sobra: dejarlo pintaría la tarjeta de una propuesta que no está.
+      proposalStatus: proposal
+        ? ((row.proposal_status as ProposalStatus | null) ?? null)
+        : null,
+    };
+  });
+}
+
+/**
+ * Deja pasar solo las propuestas que la pantalla sabe pintar.
+ *
+ * Lo que hay en `coach_messages.proposal` es JSON suelto que escribió un
+ * modelo hace días: aunque la herramienta declare `days` como obligatorio, una
+ * fila vieja o una respuesta a medias puede no traerlo. Y la tarjeta hace
+ * `proposal.days.map(...)`, así que una sola fila mala tumbaba el chat entero
+ * —no fallaba la carga, fallaba el render— y dejaba la pantalla inaccesible
+ * sin forma de borrar el mensaje culpable desde la app.
+ *
+ * Ante la duda se descarta la propuesta y se conserva el mensaje: se pierde un
+ * botón, no la conversación.
+ */
+function sanearPropuesta(value: unknown): CoachProposal | null {
+  if (!value || typeof value !== "object") return null;
+
+  const proposal = value as Partial<CoachProposal> & { kind?: string };
+
+  if (proposal.kind === "cambiar_reparto_semanal") {
+    const days = (proposal as { days?: unknown }).days;
+
+    const valido =
+      Array.isArray(days) &&
+      days.length > 0 &&
+      days.every(
+        (day) =>
+          day && typeof day === "object" && typeof (day as { day?: unknown }).day === "string"
+      );
+
+    return valido ? (proposal as CoachProposal) : null;
+  }
+
+  return proposal.kind ? (proposal as CoachProposal) : null;
 }
 
 export async function askCoach(
@@ -162,7 +205,9 @@ export async function applyProposal(
   }
 
   if (proposal.kind === "cambiar_reparto_semanal") {
-    if (proposal.days.length === 0) {
+    // `length` sobre undefined revienta igual que `.map`: aquí llega lo que
+    // guardó el modelo, no algo que hayamos construido nosotros.
+    if (!Array.isArray(proposal.days) || proposal.days.length === 0) {
       throw new Error("El reparto propuesto no tiene días");
     }
 

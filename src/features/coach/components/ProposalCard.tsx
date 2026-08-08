@@ -41,9 +41,14 @@ const describe = (proposal: CoachProposal): string[] => {
   }
 
   if (proposal.kind === "cambiar_reparto_semanal") {
+    // Segunda red, además del saneado al leer. Lo que hay guardado es JSON que
+    // escribió un modelo, y aquí un `.map` sobre undefined no da un hueco en
+    // blanco: tumba la pantalla entera del chat.
+    const days = Array.isArray(proposal.days) ? proposal.days : [];
+
     return [
       proposal.name,
-      ...proposal.days.map((day) => `${day.day}: ${day.label} — ${day.focus}`),
+      ...days.map((day) => `${day.day}: ${day.label} — ${day.focus}`),
     ];
   }
 
