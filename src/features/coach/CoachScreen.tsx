@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -17,6 +18,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HomeColors } from "@/features/home/home-theme";
+import {
+  useLatestPlan,
+  usePlanStarted,
+  useRegeneratePlan,
+} from "@/features/workout/queries";
 import { useKeyboardVisible } from "@/hooks/useKeyboardVisible";
 import { RETENTION_DAYS, type CoachMessage } from "@/services/coach";
 import { errorMessage } from "@/utils/errors";
@@ -40,6 +46,41 @@ export function CoachScreen() {
   const { data: messages, isPending, error } = useCoachMessages();
   const ask = useAskCoach();
   const resolve = useResolveProposal();
+
+  const { data: plan } = useLatestPlan();
+  const pendiente = plan && !plan.completedAt ? plan : null;
+  const { data: empezado } = usePlanStarted(pendiente?.id);
+  const regenerate = useRegeneratePlan();
+
+  /**
+   * Cambiar el reparto deja obsoleto el entrenamiento que ya estaba preparado,
+   * y hasta ahora no había forma de salir de él: "preparar el siguiente" solo
+   * aparece cuando no hay ninguno pendiente.
+   *
+   * Se pregunta en vez de rehacerlo solo. El coach propone y el usuario decide,
+   * igual que con el resto de sus cambios.
+   */
+  const ofrecerRehacer = () => {
+    // Un entrenamiento con series registradas es historial: no se toca aunque
+    // el reparto haya cambiado.
+    if (!pendiente || empezado !== false) return;
+
+    Alert.alert(
+      "Tu reparto ha cambiado",
+      `El entrenamiento preparado sigue siendo el anterior: ${pendiente.title}. ¿Lo rehago con el reparto nuevo?`,
+      [
+        { text: "Dejarlo así", style: "cancel" },
+        {
+          text: "Rehacer",
+          onPress: () =>
+            regenerate.mutate(pendiente.id, {
+              onError: (caught) =>
+                Alert.alert("No se pudo rehacer", errorMessage(caught)),
+            }),
+        },
+      ]
+    );
+  };
 
   const send = (text: string) => {
     const message = text.trim();
@@ -153,11 +194,22 @@ export function CoachScreen() {
                       resolve.variables?.messageId === item.id
                     }
                     onApply={() =>
-                      resolve.mutate({
-                        messageId: item.id,
-                        proposal: item.proposal!,
-                        status: "aplicada",
-                      })
+                      resolve.mutate(
+                        {
+                          messageId: item.id,
+                          proposal: item.proposal!,
+                          status: "aplicada",
+                        },
+                        {
+                          onSuccess: () => {
+                            if (
+                              item.proposal?.kind === "cambiar_reparto_semanal"
+                            ) {
+                              ofrecerRehacer();
+                            }
+                          },
+                        }
+                      )
                     }
                     onDiscard={() =>
                       resolve.mutate({

@@ -60,6 +60,65 @@ export async function fetchLatestPlan(
   return toDomain(data as unknown as PlanWithExercises);
 }
 
+/**
+ * ¿Se ha empezado ya este plan?
+ *
+ * "Empezado" es haber registrado al menos una serie. Abrir la pantalla crea
+ * una sesión vacía, así que mirar si hay sesión no vale: diría que sí en cuanto
+ * el usuario echa un vistazo.
+ */
+export async function planHasLoggedSets(planId: string): Promise<boolean> {
+  const { data: sessions, error } = await supabase
+    .from("workout_sessions")
+    .select("id")
+    .eq("plan_id", planId);
+
+  if (error) throw error;
+  if (!sessions?.length) return false;
+
+  const { count, error: setsError } = await supabase
+    .from("session_sets")
+    .select("id", { count: "exact", head: true })
+    .in(
+      "session_id",
+      sessions.map((session) => session.id)
+    );
+
+  if (setsError) throw setsError;
+
+  return (count ?? 0) > 0;
+}
+
+/**
+ * Tira un plan que ha quedado obsoleto antes de empezarlo.
+ *
+ * Comprueba otra vez que no tenga series aunque quien llama ya lo haya mirado:
+ * entre la comprobación y el borrado el usuario puede haber registrado una en
+ * otra pantalla, y esto borra de verdad.
+ *
+ * Los ejercicios del plan caen en cascada; las sesiones vacías se quedan con
+ * `plan_id` a nulo, que es lo que define la columna.
+ */
+export async function discardPlan(
+  userId: string,
+  planId: string
+): Promise<void> {
+  if (await planHasLoggedSets(planId)) {
+    throw new Error("Ese entrenamiento ya tiene series registradas");
+  }
+
+  const { error } = await supabase
+    .from("workout_plans")
+    .delete()
+    .eq("id", planId)
+    // El id ya es único, pero acotar por usuario deja la intención escrita y
+    // no depende solo de RLS.
+    .eq("user_id", userId)
+    .is("completed_at", null);
+
+  if (error) throw error;
+}
+
 /** Pide un plan nuevo a la IA. La clave de Anthropic vive en la función. */
 export async function generatePlan(
   userId: string,

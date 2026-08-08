@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  discardPlan,
   fetchLatestPlan,
   generatePlan,
   openSession,
+  planHasLoggedSets,
 } from "@/services/workout";
 import { useUserId } from "@/features/auth/session";
 
 export const workoutKeys = {
   plan: (userId: string) => ["workout", "plan", userId] as const,
   session: (planId: string) => ["workout", "session", planId] as const,
+  started: (planId: string) => ["workout", "started", planId] as const,
 };
 
 export function useLatestPlan() {
@@ -31,6 +34,41 @@ export function useGeneratePlan() {
     onSuccess: (plan) => {
       // Ya tenemos el plan: lo sembramos en la caché en vez de re-consultar.
       queryClient.setQueryData(workoutKeys.plan(userId), plan);
+    },
+    // Generar cuesta una llamada a la IA: si falla, que lo decida el usuario.
+    retry: false,
+  });
+}
+
+/**
+ * Si el plan ya tiene series registradas. Sirve para decidir si se puede
+ * ofrecer rehacerlo: un entrenamiento empezado es historial y no se toca.
+ */
+export function usePlanStarted(planId: string | undefined) {
+  return useQuery({
+    queryKey: workoutKeys.started(planId ?? "sin-plan"),
+    queryFn: () => planHasLoggedSets(planId!),
+    enabled: Boolean(planId),
+  });
+}
+
+/**
+ * Tira el plan pendiente y pide uno nuevo. Para cuando algo lo deja obsoleto
+ * —un cambio de reparto, por ejemplo— antes de haberlo empezado.
+ */
+export function useRegeneratePlan() {
+  const userId = useUserId()!;
+
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (planId: string) => {
+      await discardPlan(userId, planId);
+      return generatePlan(userId);
+    },
+    onSuccess: (plan) => {
+      queryClient.setQueryData(workoutKeys.plan(userId), plan);
+      queryClient.invalidateQueries({ queryKey: workoutKeys.started(plan.id) });
     },
     // Generar cuesta una llamada a la IA: si falla, que lo decida el usuario.
     retry: false,
