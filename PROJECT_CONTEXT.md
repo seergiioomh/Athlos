@@ -274,12 +274,25 @@ una línea ya invalida las actualizaciones para las builds existentes. Pasó.
 El código de `src/` no cuenta, que es justo lo que permite corregir errores por
 aire.
 
-Si la huella ya se movió y hace falta publicar igualmente, restaura el archivo
-culpable, publica, y vuelve a dejarlo como estaba:
+Cuentan los bytes, no el contenido que ve git. El `.gitignore` con finales de
+línea CRLF y el mismo con LF dan huellas distintas, y `git status` los da por
+iguales porque normaliza los saltos al comparar. Ojo con las herramientas que
+reescriben archivos en Windows.
+
+Para volver a la huella de la build 5 (`60dc5462…`), el `.gitignore` tiene que
+ser el de `db157d7`, con LF. Restaura, publica, y déjalo como estaba:
 
 ```bash
-git show HEAD~1:.gitignore > .gitignore
+git show db157d7:.gitignore > .gitignore
 ```
+
+```bash
+git checkout HEAD -- .gitignore
+```
+
+Nada de esto hará falta a partir de la siguiente build: al compilar se calcula
+una huella nueva y las actualizaciones vuelven a salir solas. Si tienes que
+tocar código y dudas, compilar es más barato que pelearse con esto.
 
 ---
 
