@@ -19,6 +19,24 @@ export async function fetchProfile(
   return data;
 }
 
+/**
+ * Borra la cuenta y todo lo que cuelga de ella.
+ *
+ * La función de Postgres decide a quién borra mirando `auth.uid()`, no un
+ * parámetro: desde aquí no hay forma de pedir el borrado de otro.
+ *
+ * El cierre de sesión va después y a propósito. El token sigue siendo válido
+ * hasta que caduque aunque el usuario ya no exista, y sin cerrarlo la app se
+ * quedaría con una sesión que apunta a la nada.
+ */
+export async function deleteAccount(): Promise<void> {
+  const { error } = await supabase.rpc("delete_account");
+
+  if (error) throw error;
+
+  await supabase.auth.signOut();
+}
+
 export async function saveProfile(
   userId: string,
   values: Record<string, unknown>

@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,6 +31,7 @@ import {
   focusAreaOptions,
   goalOptions,
   sexOptions,
+  sportOptions,
   techniqueOptions,
   weekdayOptions,
 } from "@/features/onboarding/schema";
@@ -41,7 +43,11 @@ import {
   EditProfileSheet,
   type EditSection,
 } from "./components/EditProfileSheet";
-import { useActiveSplit, useUpdateProfile } from "./queries";
+import {
+  useActiveSplit,
+  useDeleteAccount,
+  useUpdateProfile,
+} from "./queries";
 
 const labelOf = (
   options: { value: string; label: string }[],
@@ -103,6 +109,46 @@ export function ProfileScreen() {
   const { data: split } = useActiveSplit();
   const { email } = useSession();
   const update = useUpdateProfile();
+  const remove = useDeleteAccount();
+
+  /**
+   * Dos confirmaciones, no una. Es un borrado irreversible que se pulsa desde
+   * la misma pantalla que "Cerrar sesión", y los dos botones están a un dedo de
+   * distancia: la segunda pregunta obliga a leer.
+   */
+  const confirmarBorrado = () => {
+    Alert.alert(
+      "Borrar cuenta",
+      "Se borrará tu perfil y todo tu historial: entrenamientos, series, pesajes y conversaciones con el coach. No se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Continuar",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert(
+              "¿Seguro?",
+              "Esta es la última confirmación. Tus datos no se pueden recuperar después.",
+              [
+                { text: "Cancelar", style: "cancel" },
+                {
+                  text: "Borrar mi cuenta",
+                  style: "destructive",
+                  onPress: () =>
+                    remove.mutate(undefined, {
+                      onError: (caught) =>
+                        Alert.alert(
+                          "No se pudo borrar",
+                          errorMessage(caught)
+                        ),
+                    }),
+                },
+              ]
+            ),
+        },
+      ]
+    );
+  };
 
   if (isPending || !profile) {
     return (
@@ -242,6 +288,10 @@ export function ProfileScreen() {
         <View style={styles.card}>
           <Row label="Objetivo" value={labelOf(goalOptions, profile.goal)} />
           <Row
+            label="Qué quieres conseguir"
+            value={profile.goal_notes || "—"}
+          />
+          <Row
             label="Prioridad"
             value={labelsOf(focusAreaOptions, profile.focus_areas)}
           />
@@ -266,6 +316,16 @@ export function ProfileScreen() {
           <Row
             label="Dónde entrenas"
             value={labelOf(equipmentOptions, profile.equipment)}
+          />
+          <Row
+            label="Otro deporte"
+            value={
+              profile.sport && profile.sport !== "ninguno"
+                ? `${labelOf(sportOptions, profile.sport)}${
+                    profile.sport_days ? ` · ${profile.sport_days} d/sem` : ""
+                  }`
+                : labelOf(sportOptions, profile.sport)
+            }
           />
           <Row label="Cardio" value={labelOf(cardioOptions, profile.cardio)} />
           <Row
@@ -296,6 +356,21 @@ export function ProfileScreen() {
         </TouchableOpacity>
 
         {email && <Text style={styles.email}>{email}</Text>}
+
+        {/* Apagado y al final del todo: tiene que poder encontrarse, que es lo
+            que exige Apple, sin competir con nada de lo de arriba. */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={confirmarBorrado}
+          disabled={remove.isPending}
+          style={styles.deleteAccount}
+        >
+          {remove.isPending ? (
+            <ActivityIndicator color={HomeColors.textTertiary} />
+          ) : (
+            <Text style={styles.deleteAccountText}>Borrar cuenta</Text>
+          )}
+        </TouchableOpacity>
 
         <Text style={styles.version}>
           ATHLOS {Constants.expoConfig?.version ?? ""}
@@ -568,6 +643,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: HomeColors.textTertiary,
     textAlign: "center",
+  },
+
+  deleteAccount: {
+    marginTop: 22,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  deleteAccountText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: HomeColors.textTertiary,
+    textDecorationLine: "underline",
   },
 
   version: {

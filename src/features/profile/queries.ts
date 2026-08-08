@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { profileKeys } from "@/features/onboarding/queries";
-import { saveProfile } from "@/services/profile";
+import { deleteAccount, saveProfile } from "@/services/profile";
 import { fetchActiveSplit, generateSplit } from "@/services/split";
 import type { ProfileRow } from "@/types/database";
 import { useUserId } from "@/features/auth/session";
@@ -32,6 +32,24 @@ export function useGenerateSplit() {
       });
     },
     // Diseñar el reparto cuesta una llamada a la IA: que reintente el usuario.
+    retry: false,
+  });
+}
+
+/**
+ * Borra la cuenta. Al terminar se vacía la caché entera: los datos del usuario
+ * ya no existen, y dejarlos en memoria haría que la siguiente cuenta que
+ * entrase en este móvil viera un instante de los del anterior.
+ */
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteAccount,
+    onSuccess: () => {
+      queryClient.clear();
+    },
+    // Borrar no es idempotente desde fuera: si falla, que lo decida el usuario.
     retry: false,
   });
 }

@@ -35,6 +35,7 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0022_weekly_split.sql` | Reparto semanal |
 | `0023_coach_retention.sql` | Caducidad de la conversación |
 | `0024_enable_auth.sql` | Cierra el acceso anónimo y crea el perfil al registrarse |
+| `0026_delete_account.sql` | Borrado de cuenta desde la app (lo exige Apple) |
 
 ### Archivos que no forman parte de la instalación
 
@@ -107,6 +108,9 @@ caché anterior no las tiene.
 - **Las funciones sacan el usuario del token**, no del cuerpo de la petición.
   Usan la clave de servicio y se saltan RLS, así que confiar en un `user_id`
   enviado por el cliente permitiría pedir los datos de cualquiera.
+- **El borrado de cuenta sale del token.** `delete_account()` es `security
+  definer` y no recibe parámetros: mira `auth.uid()`, así que solo puede borrar
+  la cuenta de quien la llama.
 - **El coach propone, no ejecuta.** Sus herramientas no escriben en la base de
   datos: devuelven una propuesta que la app aplica, con los permisos del
   propio usuario, cuando él lo confirma.
