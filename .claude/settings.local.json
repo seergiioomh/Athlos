@@ -60,7 +60,8 @@
       "Bash(git remote *)",
       "Bash(git commit -q -m 'Fija la receta de la huella a un commit concreto *)",
       "Bash(git push *)",
-      "Bash(git commit -q -m 'Enlaza PROJECT_CONTEXT.md desde AGENTS.md *)"
+      "Bash(git commit -q -m 'Enlaza PROJECT_CONTEXT.md desde AGENTS.md *)",
+      "Bash(git commit -q -m 'Reescribe PROJECT_CONTEXT para arrancar una sesion en frio *)"
     ]
   }
 }

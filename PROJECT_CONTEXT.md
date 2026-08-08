@@ -1,13 +1,52 @@
 # ATHLOS — contexto del proyecto
 
-Documento de arranque. Léelo entero antes de tocar nada: recoge las decisiones
-que no se deducen del código y los sitios donde es fácil equivocarse.
+Documento de arranque para una sesión nueva. Recoge lo que **no se deduce
+leyendo el código**: las decisiones tomadas, por qué se tomaron, y los sitios
+donde ya nos hemos equivocado una vez.
+
+Última actualización: **8 de agosto de 2026**.
 
 Complementa, no sustituye:
 
-- `AGENTS.md` — Expo 54, consultar siempre la documentación de esa versión
+- `AGENTS.md` — reglas mínimas, se carga solo en cada sesión
 - `ROADMAP.md` — la visión original
 - `supabase/README.md` — puesta en marcha del backend, paso a paso
+
+---
+
+## Empieza aquí
+
+**La app funciona y está instalada en el iPhone del autor** por TestFlight
+(build 5). Registro, acceso, y sus datos cargando. Acaba de superarse la
+puesta en marcha de la autenticación real, que fue lo último grande.
+
+Tres cosas que conviene saber antes de tocar nada:
+
+1. **La confirmación de correo está DESACTIVADA** en Supabase. Se apagó para
+   poder probar el registro sin abrir enlaces. Mientras siga así, cualquiera
+   puede darse de alta con un correo que no es suyo. Hay que reactivarla antes
+   de que la app salga del móvil del autor.
+
+2. **La huella de runtime está desalineada** con la build 5 instalada. No
+   afecta al día a día, pero impide mandar correcciones por aire hasta
+   restaurarla o compilar una build nueva. Ver *Despliegue*.
+
+3. **`0025_remove_dev_user.sql` no se ejecuta nunca.** Borraría la cuenta real
+   del autor. Está desactivado, pero el nombre engaña.
+
+Lo siguiente en la lista es preparar la app para usuarios que no sean el autor.
+Son tres cambios y van juntos, en la misma pantalla:
+
+- **Recuperación de contraseña.** No existe. Hoy, quien olvide la suya pierde
+  la cuenta: no hay enlace en la pantalla de acceso ni forma de pedirlo desde
+  dentro. Es lo más urgente. Supabase lo resuelve con
+  `resetPasswordForEmail`.
+- **Mensajes de error en español.** Salen tal cual los manda Supabase: *"User
+  already registered"*, *"Invalid login credentials"*. Hay que traducirlos, y
+  en el caso de "ya registrado" cambiar solo a modo entrar.
+- **Borrado de cuenta desde la app.** No existe. Apple lo exige (directriz
+  5.1.1 v) a toda app que permita crearla: sin eso no se puede publicar en la
+  App Store. Para TestFlight no lo revisan.
 
 ---
 
@@ -15,11 +54,51 @@ Complementa, no sustituye:
 
 Un entrenador personal con IA, en español, para iPhone. No es una app de
 registro de gimnasio: la idea es que el entrenador **conozca al usuario, le
-acompañe y decida con él**. Todo lo que ves en la app —el entrenamiento del
-día, el reparto semanal, los consejos— lo genera Claude a partir del perfil y
-del historial real de la persona.
+acompañe y decida con él**. El entrenamiento del día, el reparto semanal y los
+consejos los genera Claude a partir del perfil y del historial real.
 
-Autor: Sergio Mateos. Uso propio de momento, distribuido por TestFlight.
+Autor: Sergio Mateos. Uso propio de momento.
+
+**Todo va en español**: interfaz, mensajes de error, comentarios del código y
+mensajes de commit.
+
+---
+
+## Estado actual
+
+### Funciona
+
+Acceso y registro · bienvenida en 4 pasos · inicio con el entrenamiento del día
+· pantalla de entrenamiento con objetivos y registro de series · chat con el
+coach y propuestas aplicables · progreso con peso y racha · perfil · reparto
+semanal · pantalla de rachas.
+
+### Configuración viva
+
+| Dónde | Estado |
+|---|---|
+| Supabase, proveedor Email | Activo |
+| Supabase, *Confirm email* | **Desactivado** — reactivar antes de compartir |
+| Supabase, registros | Permitidos |
+| EAS, variables | Correctas en `production`, `preview` y `development` |
+| TestFlight | Build 5 instalada en el iPhone del autor |
+| Pruebas externas | Sin configurar |
+| Rama | `main`, remoto `https://github.com/seergiioomh/Athlos.git`, privado |
+
+### Pendiente, además de las tres de arriba
+
+- Borrar la rama `master` del remoto, que quedó duplicada.
+- El `README.md` de la raíz sigue siendo la plantilla de Expo, y menciona un
+  script `reset-project` que ya no existe.
+- No hay política de privacidad, y la app manda a Anthropic datos personales
+  (peso, fecha de nacimiento, lesiones). Hace falta para publicar.
+- **No hay límite de gasto por usuario.** Cada persona que use la app consume
+  la cuenta de Anthropic del autor, sin tope: alguien puede pedir veinte
+  entrenamientos seguidos o tener el chat abierto toda la tarde.
+
+Ya resuelto, por si aparece en el historial y confunde: la contraseña de la
+base de datos se cambió, `EXPO_PUBLIC_DEV_USER_ID` se borró de EAS, y el caché
+del CLI de Supabase salió de git.
 
 ---
 
@@ -59,27 +138,78 @@ literales sueltos, o las invalidaciones dejan de encontrarse.
 **Estado.** React Query para todo lo del servidor. Zustand solo para la sesión.
 No hay más estado global.
 
+**El id del usuario** sale siempre de `useUserId()`. Todos los hooks empiezan
+con `const userId = useUserId()!;`. La excepción es `useProfile()`, que se
+llama desde el layout raíz antes de haber sesión: usa la versión sin aserción
+más `enabled: Boolean(userId)`.
+
+---
+
+## Las pantallas
+
+**Inicio.** El entrenamiento del día en una tarjeta, con ilustración anatómica
+recortada por región —si toca torso se ve el torso, no el cuerpo entero, para
+que la tarjeta no crezca—. Debajo: nivel ATHLOS, peso, historial de la semana.
+La racha va arriba, al lado del avatar, y al pulsarla se abre su pantalla.
+
+**Entrenamiento.** Separa dos cosas que la gente confunde: los **objetivos
+sugeridos** por la IA (series, descanso, peso recomendado) que no se editan, y
+las **series registradas** por el usuario, que son lo que de verdad hizo.
+
+**Coach.** Chat con la IA. Puede proponer cambios; el usuario los aplica o no.
+
+**Progreso.** Gráfica de peso interactiva con detalle, resumen y racha.
+
+**Perfil.** Datos, racha, y un botón que abre el reparto semanal en su propia
+pantalla para no saturar el perfil.
+
+---
+
+## Conceptos del dominio
+
+**El plan vive hasta que se hace.** `fetchLatestPlan` trae el último plan esté
+hecho o no; la pantalla decide mirando `completedAt`. Si sigue pendiente, es el
+entrenamiento vigente por muchos días que pasen. Solo cuando se termina
+aparece "preparar el siguiente". No se genera uno nuevo cada día.
+
+**Nivel y experiencia** (`src/features/home/level.ts`). 50 puntos por sesión
+terminada, 5 por serie, 500 por nivel. Terminar pesa diez veces más que una
+serie suelta a propósito: se premia la constancia, no el volumen. Los rangos
+van de Principiante a Élite.
+
+**Rachas** (`src/features/progress/streak-tiers.ts`). Once niveles, de 0 a 250
+días: Sin racha, Chispa, Encendido, En marcha, Imparable, Al rojo, Oro,
+Esmeralda, Llama azul, Leyenda, Mítico. Cuanto más alta, más llamativa —el
+último es multicolor—. La idea es que el número motive.
+
+**Propuestas del coach.** El coach nunca escribe en la base de datos: devuelve
+una propuesta que se guarda y se muestra, y la app la aplica con los permisos
+del usuario cuando él confirma.
+
+**La conversación caduca a los 5 días.** `RETENTION_DAYS` en
+`src/services/coach.ts` tiene que coincidir con el valor que usa la Edge
+Function al limpiar; si la app pidiera más de lo que se guarda, enseñaría
+huecos.
+
+**Bienvenida**: 4 pasos, ~20 campos — nombre, fecha de nacimiento (no la edad),
+sexo, altura, peso, peso objetivo, objetivo, zonas de interés, experiencia,
+nivel técnico, días concretos de entrenamiento, minutos por sesión (con opción
+"me es indiferente"), material, cardio, actividad diaria, horas de sueño,
+limitaciones y ejercicios a evitar.
+
 ---
 
 ## Reglas del proyecto
 
-Esto es lo que hay que respetar sí o sí.
-
 ### 1. La IA propone, la app escribe
 
-Las herramientas del coach **no escriben en la base de datos**. Devuelven una
-propuesta que se guarda, se le enseña al usuario, y solo se aplica cuando él
-pulsa aplicar — desde el cliente, con sus permisos y bajo RLS.
-
-Es una decisión explícita del usuario frente a la alternativa (que el coach
-ajustara el plan por su cuenta). Si algún día se cambia, que sea porque él lo
-pida.
+Decisión explícita del autor frente a la alternativa de que el coach ajustara
+el plan por su cuenta. Si algún día se cambia, que sea porque él lo pida.
 
 ### 2. Las funciones sacan el usuario del token
 
 Las tres Edge Functions usan la clave de servicio y **se saltan RLS**. Por eso
-ninguna acepta un `user_id` en el cuerpo de la petición: lo sacan del
-`Authorization: Bearer`.
+ninguna acepta un `user_id` en el cuerpo: lo sacan del `Authorization: Bearer`.
 
 ```ts
 async function userFromRequest(req, supabase): Promise<string | null> {
@@ -101,16 +231,17 @@ un alias (`export const HomeColors = Colors;`) que se mantiene porque ~27
 archivos lo importan.
 
 Hubo dos paletas conviviendo, una clara y otra oscura, y acabaron mezclándose
-dos naranjas distintos en la misma pantalla. No vuelvas a definir colores en
-ningún otro sitio.
+dos naranjas distintos en la misma pantalla. No definas colores en ningún otro
+sitio.
 
-La app es **solo oscura** (`userInterfaceStyle: "dark"`). Nada de modo claro:
-si añades un efecto de cristal, material oscuro.
+La app es **solo oscura** (`userInterfaceStyle: "dark"`). Si añades un efecto
+de cristal, material oscuro: una vez se probó claro y se veía un reborde
+blanco horrible.
 
 ### 4. Los agregados se calculan en SQL
 
-Racha, resumen de progreso, evolución por ejercicio: todo son funciones RPC de
-Postgres. No traigas filas al cliente para sumarlas.
+Racha, resumen de progreso, evolución por ejercicio: funciones RPC de Postgres.
+No traigas filas al cliente para sumarlas.
 
 ### 5. Los iconos son Hugeicons, de trazo
 
@@ -121,7 +252,7 @@ Se probaron los rellenos y se descartaron. `IconSvgElement` se importa de
 
 ## Base de datos
 
-Tablas, todas con RLS por `auth.uid()`:
+Tablas, todas con RLS por `auth.uid()` (verificado):
 
 | Tabla | Contenido |
 |---|---|
@@ -138,17 +269,27 @@ Tablas, todas con RLS por `auth.uid()`:
 Funciones: `progress_summary`, `exercise_progress`, `workout_streak`,
 `import_session`, `prune_coach_messages`, `handle_new_user`.
 
-**Sugerido vs. registrado.** `plan_exercises` es lo que propone la IA y no se
-edita; `session_sets` es lo que el usuario hace de verdad. Son dos cosas
-distintas a propósito y así se ven en la pantalla de entrenamiento.
+La única política permisiva es la del catálogo de ejercicios, que cualquier
+usuario autenticado puede leer: es común a todos y no contiene nada personal.
 
 **El perfil se crea solo.** Un trigger en `auth.users` inserta la fila al
-registrarse. La bienvenida actualiza, nunca inserta.
+registrarse. La bienvenida actualiza, nunca inserta. Sin eso, un fallo en la
+bienvenida dejaría cuentas sin perfil, un estado del que cuesta salir.
 
 Las migraciones se ejecutan **a mano en el SQL Editor**, en orden. El CLI no
-está enlazado para `db push`. Las que no forman parte de la instalación
-(semillas, la etapa antigua sin login, el borrado de datos) están marcadas en
-`supabase/README.md`.
+está enlazado para `db push`. Las que no forman parte de la instalación están
+marcadas en `supabase/README.md`.
+
+### La «cuenta de desarrollo» es la cuenta real
+
+`f4707a48-313f-4fe6-9ee2-0a8d09973167` no es un usuario ficticio: se creó con
+el correo real del autor, así que al activar el login se convirtió en su cuenta
+normal. Es con la que entra, y guarda los entrenamientos importados de sus
+notas en papel, los pesajes y el plan.
+
+Por eso `0025_remove_dev_user.sql` está obsoleto y con el `delete` comentado.
+Para vaciar entrenamientos sin tocar la cuenta,
+`0018_reset_training_data.sql`.
 
 ---
 
@@ -171,17 +312,21 @@ Herramientas del coach — todas devuelven propuestas, ninguna escribe:
 `ajustar_ejercicio`, `sustituir_ejercicio`, `cambiar_reparto_semanal`,
 `actualizar_limitaciones`.
 
-**El catálogo se filtra por material antes de mandarlo al modelo.** Si no, te
+**El catálogo se filtra por material antes de mandarlo al modelo.** Si no,
 propone ejercicios con máquinas que el usuario no tiene.
 
 Todas llevan CORS con OPTIONS. Sin eso, `fetch` desde web falla en silencio.
+
+La clave de Anthropic vive **solo** como secreto de Supabase, nunca en el
+`.env` de la app: todo lo que lleva `EXPO_PUBLIC_` acaba dentro del bundle y es
+legible por cualquiera que descargue la app.
 
 ---
 
 ## Arranque de la app
 
 `app/_layout.tsx` tiene tres puertas seguidas: falta de configuración → sesión
-cargando → perfil cargando. Y luego `Stack.Protected` decide entre `auth`,
+cargando → perfil cargando. Después `Stack.Protected` decide entre `auth`,
 `onboarding` y la app.
 
 Dos cosas que no son adorno:
@@ -194,7 +339,8 @@ Dos cosas que no son adorno:
   de dejar al usuario mirando un indicador para siempre.
 
 `configError` en `src/lib/supabase.ts` se enseña **en pantalla** en lugar de
-lanzar una excepción: en una app compilada no hay consola donde mirar.
+lanzar una excepción: en una app compilada no hay consola donde mirar. También
+comprueba que la clave *tenga forma de clave*, no solo que exista.
 
 ---
 
@@ -226,6 +372,24 @@ las props necesitan llaves (`prop={Colors.x}`, no `prop=Colors.x`) y los
 imports multilínea se parten si buscas "la última línea que empieza por
 `import`". Edita a mano.
 
+**Antes de culpar al caché, comprueba de dónde salen los datos.** Una vez se
+persiguió un "no se actualiza" que venía de la base de datos, no del valor por
+defecto que se estaba editando.
+
+### Las variables de EAS no son el `.env`
+
+Son dos sitios distintos y no se sincronizan solos. El `.env` local vale para
+`npx expo start`; las builds y los `eas update` leen las variables del
+servidor, por entorno:
+
+```bash
+npx eas-cli env:list production
+```
+
+Estuvo subido el marcador `TU_CLAVE_ANON` sin sustituir, y el resultado fue una
+app que arrancaba bien y solo fallaba al registrarse, con «Invalid API key».
+Antes de compilar, comprueba que coinciden.
+
 ---
 
 ## Despliegue
@@ -234,123 +398,91 @@ EAS Build y Submit. Perfiles en `eas.json`: `development`, `preview`,
 `production`, cada uno con su entorno y su canal. Versión de compilación
 remota, autoincremental. `runtimeVersion` por huella.
 
-- Identificador: `com.sergiohateos.athlos` (`com.athlos.app` está cogido)
+- Identificador: `com.sergiohateos.athlos` (`com.athlos.app` está cogido por
+  otra persona)
 - Proyecto EAS: `fc9f5e21-69f6-48cd-bea2-830a92faf018`, propietario `esematt`
-- Se instala en el iPhone por TestFlight
+- Proyecto Supabase: `dcuvfhbqoteodzzldocc`
 
-Un cambio solo de JavaScript va con `eas update` al canal; si tocas
-dependencias nativas o `app.json`, hay que recompilar.
+Un cambio solo de JavaScript va con `eas update`; si tocas dependencias nativas
+o `app.json`, hay que recompilar.
 
 **Los `eas update` van siempre con `-p ios`.** Por omisión exporta todas las
 plataformas, y la web está en `output: "static"`, que prerenderiza en Node: al
 importar el layout raíz se crea el cliente de Supabase, que pide la sesión a
 AsyncStorage, cuya versión web lee `window.localStorage`. En Node no hay
-`window` y el export se cae con `ReferenceError`. Solo hay build de iOS, así
-que exportar web no aporta nada.
+`window` y el export se cae con `ReferenceError`. Solo hay build de iOS.
 
-Se arreglaría de raíz quitando la salida estática de `app.json`, pero eso
-cambia la huella y obliga a recompilar. Cuando toque la siguiente build.
+Se arreglaría quitando la salida estática de `app.json`, pero eso cambia la
+huella y obliga a recompilar. Cuando toque la siguiente build.
 
 ### Comprueba la huella justo antes de publicar
 
 Un `eas update` solo llega a un dispositivo si su `runtimeVersion` es idéntica
 a la de la build instalada. Si no coincide, no falla nada: se publica, se ve en
-el panel, y el móvil simplemente la ignora. Parece que la corrección no
-funciona cuando en realidad no ha llegado.
+el panel, y el móvil la ignora. Parece que la corrección no funciona cuando en
+realidad no ha llegado. **Costó una tarde entera.**
 
 ```bash
 npx expo-updates fingerprint:generate --platform ios
 ```
 
 ```bash
-npx eas-cli build:list --limit 1        # Runtime Version de lo instalado
+npx eas-cli build:list --limit 1
 ```
 
 Cuentan para la huella `.gitignore`, `eas.json`, `app.json`, `package.json`
-(scripts y versión de react-native), los iconos y el autolinking. **El
-`.gitignore` cuenta**, aunque no influya en nada de lo que se ejecuta: añadirle
-una línea ya invalida las actualizaciones para las builds existentes. Pasó.
+(scripts y versión de react-native), los iconos y el autolinking. El código de
+`src/` **no** cuenta, que es justo lo que permite corregir errores por aire.
 
-El código de `src/` no cuenta, que es justo lo que permite corregir errores por
-aire.
+**El `.gitignore` cuenta**, aunque no influya en nada de lo que se ejecuta.
+Añadirle una línea invalida las actualizaciones para las builds existentes.
 
-Cuentan los bytes, no el contenido que ve git. El `.gitignore` con finales de
-línea CRLF y el mismo con LF dan huellas distintas, y `git status` los da por
-iguales porque normaliza los saltos al comparar. Ojo con las herramientas que
-reescriben archivos en Windows.
+Y cuentan los **bytes**, no el contenido que ve git: el mismo archivo con CRLF
+y con LF da huellas distintas, y `git status` los da por iguales porque
+normaliza los saltos al comparar.
 
-Para volver a la huella de la build 5 (`60dc5462…`), el `.gitignore` tiene que
-ser el de `db157d7`, con LF. Restaura, publica, y déjalo como estaba:
+Estado hoy: la build 5 espera `60dc546267f3db9ef9a077f4be9d9177272fe2d7`. Para
+volver a esa huella, el `.gitignore` tiene que ser el de `db157d7`, con LF:
 
 ```bash
 git show db157d7:.gitignore > .gitignore
 ```
+
+Publicas, y lo dejas como estaba:
 
 ```bash
 git checkout HEAD -- .gitignore
 ```
 
 Nada de esto hará falta a partir de la siguiente build: al compilar se calcula
-una huella nueva y las actualizaciones vuelven a salir solas. Si tienes que
-tocar código y dudas, compilar es más barato que pelearse con esto.
+una huella nueva y las actualizaciones vuelven a salir solas. **Si dudas,
+compilar sale más barato que pelearse con esto.**
 
----
+### TestFlight
 
-## Estado y pendientes
+Para añadir a alguien, pruebas **externas**: grupo, build, información de
+prueba, y enviar a Beta App Review (de horas a un par de días). Después, por
+correo o enlace público. Las pruebas internas exigen meter a la persona en el
+equipo de App Store Connect, que es desproporcionado para un probador.
 
-Funcionando: acceso, bienvenida, inicio, entrenamiento, coach con propuestas,
-progreso con peso y racha, perfil, reparto semanal.
-
-Rama `main`, remoto `https://github.com/seergiioomh/athlos.git` (privado).
-
-Pendiente:
-
-- Borrar la rama `master` del remoto, que quedó duplicada.
-- Reactivar *Confirm email* en Supabase cuando deje de ser solo uso propio.
-  Está activada ahora mismo; mientras se prueba, estorba.
-- El `README.md` de la raíz sigue siendo el de la plantilla de Expo.
-
-Hecho, por si aparece en el historial y confunde: la contraseña de la base de
-datos ya se cambió, y `EXPO_PUBLIC_DEV_USER_ID` ya no está en EAS.
-
-### La «cuenta de desarrollo» es la cuenta real
-
-`f4707a48-313f-4fe6-9ee2-0a8d09973167` no es un usuario ficticio: se creó con
-el correo real del dueño de la app, así que al activar el login se convirtió en
-su cuenta normal. Es con la que entra, y guarda los entrenamientos importados
-de sus notas, los pesajes y el plan.
-
-Por eso `0025_remove_dev_user.sql` **no se ejecuta nunca** — está obsoleto y con
-el `delete` comentado. Para vaciar entrenamientos sin tocar la cuenta,
-`0018_reset_training_data.sql`.
-
-### Las variables de EAS no son el `.env`
-
-Son dos sitios distintos y no se sincronizan solos. El `.env` local vale para
-`npx expo start`; las builds y los `eas update` leen las variables del
-servidor, por entorno (`npx eas-cli env:list production`).
-
-Estuvo subido el marcador `TU_CLAVE_ANON` sin sustituir, y el resultado fue una
-app que arrancaba bien y solo fallaba al registrarse, con «Invalid API key».
-Desde entonces `src/lib/supabase.ts` comprueba que la clave tenga forma de
-clave, no solo que exista.
-
-Antes de compilar, comprueba que coinciden.
+La app pide cuenta nada más abrirse, así que en la información de prueba hay
+que decirle al revisor que puede registrarse él mismo. Si no, se encuentra un
+muro de acceso y la rechaza.
 
 ---
 
 ## Trabajar desde otro equipo
 
 ```bash
-git clone https://github.com/seergiioomh/athlos.git
+git clone https://github.com/seergiioomh/Athlos.git
 ```
 
 ```bash
 npm install
 ```
 
-El `.env` no viaja en git, a propósito: cópialo a mano desde el otro equipo o
-sácalo del panel de Supabase (`.env.example` dice de dónde). Después:
+El `.env` no viaja en git, a propósito: cópialo a mano o sácalo del panel de
+Supabase (`.env.example` dice de dónde). Después:
 
 ```bash
 npx expo start --clear
@@ -358,3 +490,8 @@ npx expo start --clear
 
 Clónalo **fuera de OneDrive** —algo tipo `C:\dev\athlos`— o la sincronización
 se pelea con el observador de archivos de Metro.
+
+Las conversaciones de Claude Code se guardan en el disco de cada equipo y no
+viajan con el repositorio. Por eso existe este documento: en otro ordenador se
+empieza una sesión nueva, y lo que sabrá del proyecto es lo que esté escrito
+aquí. Si algo importante se decide en una conversación, escríbelo.
