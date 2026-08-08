@@ -22,10 +22,11 @@ puesta en marcha de la autenticación real, que fue lo último grande.
 
 Tres cosas que conviene saber antes de tocar nada:
 
-1. **La confirmación de correo está DESACTIVADA** en Supabase. Se apagó para
-   poder probar el registro sin abrir enlaces. Mientras siga así, cualquiera
-   puede darse de alta con un correo que no es suyo. Hay que reactivarla antes
-   de que la app salga del móvil del autor.
+1. **La confirmación de correo está ACTIVADA.** Con ella, el registro no abre
+   sesión hasta abrir el enlace del correo. Ese enlace vuelve a la app por
+   `athlos://confirm`, que tiene que estar dada de alta en *Authentication →
+   URL Configuration*; si no, Supabase manda al *Site URL* y en un móvil no
+   abre nada.
 
 2. **La huella de runtime está desalineada** con la build 5 instalada. No
    afecta al día a día, pero impide mandar correcciones por aire hasta
@@ -34,19 +35,17 @@ Tres cosas que conviene saber antes de tocar nada:
 3. **`0025_remove_dev_user.sql` no se ejecuta nunca.** Borraría la cuenta real
    del autor. Está desactivado, pero el nombre engaña.
 
-Lo siguiente en la lista es preparar la app para usuarios que no sean el autor.
-Son tres cambios y van juntos, en la misma pantalla:
+Los tres cambios que faltaban para abrir la app a otros usuarios **ya están
+escritos** (sin commitear, ver *Estado actual*):
 
-- **Recuperación de contraseña.** No existe. Hoy, quien olvide la suya pierde
-  la cuenta: no hay enlace en la pantalla de acceso ni forma de pedirlo desde
-  dentro. Es lo más urgente. Supabase lo resuelve con
-  `resetPasswordForEmail`.
-- **Mensajes de error en español.** Salen tal cual los manda Supabase: *"User
-  already registered"*, *"Invalid login credentials"*. Hay que traducirlos, y
-  en el caso de "ya registrado" cambiar solo a modo entrar.
-- **Borrado de cuenta desde la app.** No existe. Apple lo exige (directriz
-  5.1.1 v) a toda app que permita crearla: sin eso no se puede publicar en la
-  App Store. Para TestFlight no lo revisan.
+- **Recuperación de contraseña**, por enlace en el correo. Probada y
+  funcionando. La plantilla del correo **no se puede editar sin SMTP propio**,
+  así que el método del código de seis dígitos quedó descartado: se usa la
+  plantilla de serie y la app decide el destino con `redirectTo`.
+- **Mensajes de error en español**, en `src/utils/auth-errors.ts`. Traduce
+  primero por `code`, que es estable, y solo después por el texto.
+- **Borrado de cuenta**, con la función `delete_account()` de la migración
+  `0026`. Apple lo exige (directriz 5.1.1 v) para publicar.
 
 ---
 
@@ -78,15 +77,25 @@ semanal · pantalla de rachas.
 | Dónde | Estado |
 |---|---|
 | Supabase, proveedor Email | Activo |
-| Supabase, *Confirm email* | **Desactivado** — reactivar antes de compartir |
+| Supabase, *Confirm email* | Activado |
+| Supabase, *Redirect URLs* | `athlos://confirm` y `athlos://reset-password` |
+| Supabase, SMTP | El de serie. Pocos correos por hora y **plantillas no editables** |
 | Supabase, registros | Permitidos |
 | EAS, variables | Correctas en `production`, `preview` y `development` |
 | TestFlight | Build 5 instalada en el iPhone del autor |
 | Pruebas externas | Sin configurar |
 | Rama | `main`, remoto `https://github.com/seergiioomh/Athlos.git`, privado |
 
-### Pendiente, además de las tres de arriba
+### Pendiente
 
+- **Ejecutar `0026` y `0027`** en el SQL Editor y **redesplegar las tres Edge
+  Functions** con `--use-api`. Hasta que no se haga, `goal_notes` se guarda
+  pero el modelo no lo lee: toda la ganancia del rediseño está ahí parada.
+- **Compilar una development build nueva.** El icono y la pantalla de inicio
+  cambiaron, y eso va dentro del binario: en el móvil se sigue viendo el
+  antiguo.
+- La variante pequeña del icono, sin la chispa, para ajustes y notificaciones.
+  A 29 píxeles la chispa se convierte en un borrón.
 - Borrar la rama `master` del remoto, que quedó duplicada.
 - El `README.md` de la raíz sigue siendo la plantilla de Expo, y menciona un
   script `reset-project` que ya no existe.
@@ -191,11 +200,28 @@ del usuario cuando él confirma.
 Function al limpiar; si la app pidiera más de lo que se guarda, enseñaría
 huecos.
 
-**Bienvenida**: 4 pasos, ~20 campos — nombre, fecha de nacimiento (no la edad),
-sexo, altura, peso, peso objetivo, objetivo, zonas de interés, experiencia,
-nivel técnico, días concretos de entrenamiento, minutos por sesión (con opción
-"me es indiferente"), material, cardio, actividad diaria, horas de sueño,
-limitaciones y ejercicios a evitar.
+**Bienvenida**: 7 pasos cortos — objetivo, **campo libre**, datos personales
+(nombre, fecha de nacimiento *no la edad*, sexo, altura, peso, peso objetivo),
+experiencia y técnica, disponibilidad (días concretos, minutos, material),
+deporte de fuera con sus días, y limitaciones.
+
+El **campo libre** (`goal_notes`) es la pieza que más contexto aporta: una
+etiqueta dice "ganar músculo", una frase dice "ganar músculo y mejorar mi
+velocidad para el fútbol". Viaja a las tres Edge Functions.
+
+Zonas de interés, cardio, actividad diaria y horas de sueño **ya no se
+preguntan** en la bienvenida, pero siguen en la tabla, siguen editables desde
+el perfil y siguen viajando al prompt. No se borró ninguna columna.
+
+Dos trampas del formulario, las dos ya pisadas:
+
+- **Todo campo obligatorio del esquema tiene que estar en el `fields` de algún
+  paso.** Al enviar se valida el objeto entero y se busca en qué paso vive el
+  que falla; si no está en ninguno, `findIndex` da -1, no se cambia de pantalla
+  y el usuario se queda atascado con un error que no ve.
+- **La bienvenida se pasa una sola vez.** Cualquier pregunta nueva tiene que
+  añadirse también a `EditProfileSheet`, o quien ya tenga cuenta no podrá
+  contestarla nunca.
 
 ---
 
@@ -267,7 +293,11 @@ Tablas, todas con RLS por `auth.uid()` (verificado):
 | `weekly_splits` | Reparto semanal |
 
 Funciones: `progress_summary`, `exercise_progress`, `workout_streak`,
-`import_session`, `prune_coach_messages`, `handle_new_user`.
+`import_session`, `prune_coach_messages`, `handle_new_user`, `delete_account`.
+
+`delete_account()` es `security definer` y **no recibe parámetros**: saca al
+usuario de `auth.uid()`, igual que las Edge Functions lo sacan del token.
+Aceptar un id dejaría a cualquiera borrar la cuenta de cualquiera.
 
 La única política permisiva es la del catálogo de ejercicios, que cualquier
 usuario autenticado puede leer: es común a todos y no contiene nada personal.
