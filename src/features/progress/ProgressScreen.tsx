@@ -251,7 +251,9 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    marginTop: 20,
+    // Poco: el selector manda sobre esta tarjeta, así que van juntos. El aire
+    // se reparte por arriba, separándolos del título.
+    marginTop: 10,
     padding: 18,
     borderRadius: 24,
     backgroundColor: HomeColors.surface,
@@ -323,7 +325,7 @@ const styles = StyleSheet.create({
   deltaTextDown: { color: HomeColors.success },
   deltaTextUp: { color: HomeColors.warning },
 
-  ranges: { marginBottom: 14 },
+  ranges: { marginTop: 24 },
 
   chartPlaceholder: {
     height: 160,

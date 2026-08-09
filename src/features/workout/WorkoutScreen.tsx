@@ -25,6 +25,27 @@ import {
 
 const WEEKDAYS = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"] as const;
 
+const NOMBRES = [
+  "domingo",
+  "lunes",
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "sábado",
+];
+
+/**
+ * El día de la semana de una fecha AAAA-MM-DD, escrito.
+ *
+ * Se construye por componentes: `new Date("2026-08-10")` interpreta la cadena
+ * como UTC y, al leerla en hora local, puede caer en el día anterior.
+ */
+const diaDe = (iso: string) => {
+  const [year, month, day] = iso.split("-").map(Number);
+  return NOMBRES[new Date(year, month - 1, day).getDay()] ?? "otro día";
+};
+
 export function WorkoutScreen() {
   const router = useRouter();
 
@@ -126,41 +147,57 @@ export function WorkoutScreen() {
           <Action label="Reintentar" onPress={() => refetch()} />
         </Centered>
       ) : ofrecerCambio && planDeOtroDia ? (
-        <Centered>
-          <Text style={styles.title}>Este es de otro día</Text>
+        <ScrollView contentContainerStyle={styles.choice}>
+          <Text style={styles.title}>¿Qué entrenas hoy?</Text>
           <Text style={styles.body}>
-            «{planDeOtroDia.title}» se quedó preparado y sin hacer.
-            {slotDeHoy
-              ? ` Hoy te toca ${slotDeHoy.label}: ${slotDeHoy.focus}.`
-              : " Hoy no es día de entrenamiento en tu reparto."}
+            Te quedó uno preparado del {diaDe(planDeOtroDia.scheduledFor)} sin
+            hacer.
           </Text>
 
-          <Action
-            label="Preparar el de hoy"
+          {/* Dos opciones con el mismo peso, no una acción y una escapatoria:
+              cada tarjeta dice qué entrenamiento sale si la eliges. */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            disabled={regenerate.isPending}
             onPress={() =>
               regenerate.mutate(planDeOtroDia.id, {
                 onError: () => setInsistir(true),
               })
             }
-          />
+            style={[styles.option, styles.optionToday]}
+          >
+            <Text style={styles.optionEyebrow}>HOY</Text>
+            <Text style={styles.optionTitle}>
+              {slotDeHoy ? slotDeHoy.label : "Sesión suelta"}
+            </Text>
+            <Text style={styles.optionHint}>
+              {regenerate.isPending
+                ? "Preparándolo…"
+                : slotDeHoy
+                  ? slotDeHoy.focus
+                  : "Hoy no toca entrenar según tu reparto"}
+            </Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setInsistir(true)}
+            activeOpacity={0.85}
             disabled={regenerate.isPending}
-            style={styles.secondary}
+            onPress={() => setInsistir(true)}
+            style={styles.option}
           >
-            <Text style={styles.secondaryText}>
-              {regenerate.isPending
-                ? "Preparando…"
-                : `Hacer «${planDeOtroDia.title}» igualmente`}
+            <Text style={styles.optionEyebrowMuted}>
+              DEL {diaDe(planDeOtroDia.scheduledFor).toUpperCase()}
+            </Text>
+            <Text style={styles.optionTitle}>{planDeOtroDia.title}</Text>
+            <Text style={styles.optionHint}>
+              {planDeOtroDia.exercises.length} ejercicios ya preparados
             </Text>
           </TouchableOpacity>
 
           {regenerate.error && (
             <Text style={styles.body}>{message(regenerate.error)}</Text>
           )}
-        </Centered>
+        </ScrollView>
       ) : faltaReparto ? (
         <ScrollView contentContainerStyle={styles.splitStep}>
           <Text style={styles.title}>Primero, tu semana</Text>
@@ -292,6 +329,55 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: HomeColors.text,
     textAlign: "center",
+  },
+
+  choice: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 120,
+    gap: 12,
+  },
+
+  option: {
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: HomeColors.surface,
+    borderWidth: 1,
+    borderColor: HomeColors.border,
+    gap: 4,
+  },
+
+  // La de hoy va marcada, pero las dos se pulsan igual: es una elección, no
+  // una recomendación con letra pequeña.
+  optionToday: {
+    borderColor: HomeColors.primary,
+    backgroundColor: HomeColors.primarySoft,
+  },
+
+  optionEyebrow: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    color: HomeColors.primary,
+  },
+
+  optionEyebrowMuted: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    color: HomeColors.textTertiary,
+  },
+
+  optionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: HomeColors.text,
+  },
+
+  optionHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: HomeColors.textSecondary,
   },
 
   secondary: {
