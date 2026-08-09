@@ -1,3 +1,5 @@
+import { AnalyticsUpIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -9,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ChipGroup } from "@/components/ui/ChipGroup";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { HomeColors } from "@/features/home/home-theme";
 import { levelFromStats } from "@/features/home/level";
 import { errorMessage } from "@/utils/errors";
@@ -25,6 +27,7 @@ import {
 const ranges = [
   { value: 7, label: "7 días" },
   { value: 30, label: "30 días" },
+  { value: 90, label: "3 meses" },
   { value: 365, label: "1 año" },
 ];
 
@@ -67,11 +70,31 @@ export function ProgressScreen() {
         <Text style={styles.screenTitle}>Progreso</Text>
 
         {/* ---------------------------------------------------------- peso */}
+        {/* El selector va fuera de la tarjeta: manda sobre la gráfica, y
+            dentro competía con el peso por la misma línea de lectura. */}
+        <View style={styles.ranges}>
+          <SegmentedControl options={ranges} value={days} onChange={setDays} />
+        </View>
+
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <View>
-              <Text style={styles.cardLabel}>Peso corporal</Text>
+            <View style={styles.headerLeft}>
+              <View style={styles.iconBox}>
+                <HugeiconsIcon
+                  icon={AnalyticsUpIcon}
+                  size={20}
+                  color={HomeColors.primary}
+                  strokeWidth={2}
+                />
+              </View>
 
+              <View style={styles.headerTitles}>
+                <Text style={styles.cardTitle}>Tu evolución</Text>
+                <Text style={styles.cardLabel}>Peso corporal (kg)</Text>
+              </View>
+            </View>
+
+            <View style={styles.headerRight}>
               {current !== undefined ? (
                 <View style={styles.currentRow}>
                   <Text style={styles.current}>{kg(current)}</Text>
@@ -80,31 +103,27 @@ export function ProgressScreen() {
               ) : (
                 <Text style={styles.current}>—</Text>
               )}
-            </View>
 
-            {history.length > 1 && (
-              <View
-                style={[
-                  styles.delta,
-                  delta <= 0 ? styles.deltaDown : styles.deltaUp,
-                ]}
-              >
-                <Text
+              {history.length > 1 && (
+                <View
                   style={[
-                    styles.deltaText,
-                    delta <= 0 ? styles.deltaTextDown : styles.deltaTextUp,
+                    styles.delta,
+                    delta <= 0 ? styles.deltaDown : styles.deltaUp,
                   ]}
                 >
-                  {delta === 0
-                    ? "sin cambios"
-                    : `${delta < 0 ? "↓" : "↑"} ${kg(Math.abs(delta))} kg`}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.ranges}>
-            <ChipGroup options={ranges} value={days} onChange={setDays} />
+                  <Text
+                    style={[
+                      styles.deltaText,
+                      delta <= 0 ? styles.deltaTextDown : styles.deltaTextUp,
+                    ]}
+                  >
+                    {delta === 0
+                      ? "sin cambios"
+                      : `${delta < 0 ? "↓" : "↑"} ${kg(Math.abs(delta))} kg`}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {weightPending ? (
@@ -240,8 +259,37 @@ const styles = StyleSheet.create({
 
   cardHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
+  },
+
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    // Cede sitio al peso: con nombres largos, el título se parte antes que
+    // empujar la cifra fuera de la tarjeta.
+    flexShrink: 1,
+  },
+
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: HomeColors.primarySoft,
+  },
+
+  headerTitles: { flexShrink: 1 },
+
+  headerRight: { alignItems: "flex-end", gap: 6 },
+
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: HomeColors.text,
   },
 
   cardLabel: { fontSize: 13, color: HomeColors.textSecondary },
@@ -249,8 +297,7 @@ const styles = StyleSheet.create({
   currentRow: { flexDirection: "row", alignItems: "baseline", gap: 5 },
 
   current: {
-    marginTop: 4,
-    fontSize: 40,
+    fontSize: 28,
     fontWeight: "800",
     letterSpacing: -1.6,
     color: HomeColors.text,
@@ -276,7 +323,7 @@ const styles = StyleSheet.create({
   deltaTextDown: { color: HomeColors.success },
   deltaTextUp: { color: HomeColors.warning },
 
-  ranges: { marginTop: 16, marginBottom: 8 },
+  ranges: { marginBottom: 14 },
 
   chartPlaceholder: {
     height: 160,
