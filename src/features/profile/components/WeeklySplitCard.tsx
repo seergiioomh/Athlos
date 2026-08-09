@@ -51,6 +51,11 @@ export function WeeklySplitCard({
 
   const today = WEEKDAYS[new Date().getDay()];
 
+  // Segunda red, además del saneado del servicio. Esta pantalla no tiene
+  // salida propia: si revienta al montar, no queda ningún botón que pulsar
+  // para arreglarlo.
+  const days = Array.isArray(split.days) ? split.days : [];
+
   return (
     <View style={styles.card}>
       <Text style={styles.eyebrow}>TU REPARTO SEMANAL</Text>
@@ -61,7 +66,7 @@ export function WeeklySplitCard({
       )}
 
       <View style={styles.days}>
-        {split.days.map((day) => (
+        {days.map((day) => (
           <View
             key={day.day}
             style={[styles.day, day.day === today && styles.dayToday]}
