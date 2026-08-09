@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,6 +11,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HomeColors } from "@/features/home/home-theme";
+import { WeeklySplitCard } from "@/features/profile/components/WeeklySplitCard";
+import { useActiveSplit, useGenerateSplit } from "@/features/profile/queries";
 import { errorMessage } from "@/utils/errors";
 import { ActiveWorkout } from "./ActiveWorkout";
 import { useGeneratePlan, useLatestPlan } from "./queries";
@@ -20,9 +23,30 @@ export function WorkoutScreen() {
   const { data: plan, isPending, error, refetch } = useLatestPlan();
   const generate = useGeneratePlan();
 
+  const { data: split, isPending: splitPending } = useActiveSplit();
+  const makeSplit = useGenerateSplit();
+
+  /**
+   * Si el usuario ha dado el visto bueno a su reparto.
+   *
+   * Quien ya tenía uno al entrar no tiene nada que aprobar: se da por bueno.
+   * Quien no lo tiene pasa antes por diseñarlo y confirmarlo, porque el reparto
+   * decide el foco de todas sus sesiones y empezar a entrenar sin haberlo
+   * mirado es empezar por el tejado.
+   */
+  const [aprobado, setAprobado] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (splitPending || aprobado !== null) return;
+    setAprobado(Boolean(split));
+  }, [splitPending, split, aprobado]);
+
   // Mientras no esté hecho, este es el entrenamiento vigente por muchos días
   // que hayan pasado.
   const pending = plan && !plan.completedAt ? plan : null;
+
+  /** Hay que pasar por la semana antes de tocar el entrenamiento. */
+  const faltaReparto = !pending && aprobado === false;
 
   // Una sola tentativa automática por visita: si la IA falla, insistir sola
   // sería quemar llamadas sin que el usuario se entere.
@@ -33,9 +57,13 @@ export function WorkoutScreen() {
     // siguiente lo pide el usuario: es él quien sabe cuándo vuelve.
     if (isPending || error || plan || attempted.current) return;
 
+    // Y nunca antes de tener un reparto aprobado: la sesión se diseña a partir
+    // de él, así que generarla antes sería tirarla a la basura.
+    if (aprobado !== true) return;
+
     attempted.current = true;
     generate.mutate(undefined);
-  }, [isPending, error, plan, generate]);
+  }, [isPending, error, plan, generate, aprobado]);
 
   // Entrenar es una pestaña raíz: si se llegó tocando la tab no hay
   // historial que deshacer, así que caemos a Inicio.
@@ -65,6 +93,42 @@ export function WorkoutScreen() {
           <Text style={styles.body}>{message(error)}</Text>
           <Action label="Reintentar" onPress={() => refetch()} />
         </Centered>
+      ) : faltaReparto ? (
+        <ScrollView contentContainerStyle={styles.splitStep}>
+          <Text style={styles.title}>Primero, tu semana</Text>
+          <Text style={styles.body}>
+            El reparto decide qué te toca cada día, y cada entrenamiento sale
+            de él. Míralo antes de empezar: si no te encaja, lo cambiamos.
+          </Text>
+
+          <WeeklySplitCard
+            split={split ?? null}
+            generating={makeSplit.isPending}
+            error={makeSplit.error ? message(makeSplit.error) : undefined}
+            onGenerate={() => makeSplit.mutate()}
+            onTalkToCoach={() => router.push("/(tabs)/coach")}
+          />
+
+          {split && (
+            <>
+              <Action
+                label="Me encaja, prepara mi entrenamiento"
+                onPress={() => setAprobado(true)}
+              />
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => makeSplit.mutate()}
+                disabled={makeSplit.isPending}
+                style={styles.secondary}
+              >
+                <Text style={styles.secondaryText}>
+                  {makeSplit.isPending ? "Diseñando…" : "Prefiero otro reparto"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </ScrollView>
       ) : pending && pending.exercises.length > 0 ? (
         <ActiveWorkout
           // Un plan nuevo es un entrenamiento nuevo: la `key` fuerza el
@@ -145,12 +209,34 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
+  // El paso del reparto no va centrado como el resto: la tarjeta ocupa el
+  // ancho y necesita scroll cuando la semana tiene seis días.
+  splitStep: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 120,
+    gap: 12,
+  },
+
   title: {
     marginTop: 8,
     fontSize: 20,
     fontWeight: "700",
     color: HomeColors.text,
     textAlign: "center",
+  },
+
+  secondary: {
+    marginTop: 4,
+    height: 46,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  secondaryText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: HomeColors.textSecondary,
   },
 
   body: {

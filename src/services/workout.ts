@@ -119,13 +119,21 @@ export async function discardPlan(
   if (error) throw error;
 }
 
+const WEEKDAYS = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"] as const;
+
 /** Pide un plan nuevo a la IA. La clave de Anthropic vive en la función. */
 export async function generatePlan(
   userId: string,
   focus?: string
 ): Promise<WorkoutPlan> {
   const { data, error } = await supabase.functions.invoke("generate-workout", {
-    body: { focus },
+    body: {
+      focus,
+      // La función corre en UTC, así que su idea de "hoy" se adelanta a la del
+      // usuario: de madrugada le daría la sesión de ayer. El día lo pone el
+      // móvil, que es el único que conoce su huso.
+      today: WEEKDAYS[new Date().getDay()],
+    },
   });
 
   if (error) throw error;

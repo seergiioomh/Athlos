@@ -105,6 +105,10 @@ const SYSTEM = `Eres el entrenador personal de la app ATHLOS. Diseñas el entren
 de hoy para un usuario concreto, a partir de su historial reciente.
 
 Reglas:
+- EL REPARTO SEMANAL MANDA. Si el usuario tiene un reparto vigente, el foco del
+  día lo decide él, no tú: si hoy le toca Pull, la sesión es de Pull entera. No
+  es una sugerencia ni un punto de partida. Solo eliges el foco cuando no hay
+  reparto, o cuando hoy no es un día de entrenamiento suyo.
 - Elige ejercicios ÚNICAMENTE del catálogo que se te da, usando su slug exacto.
 - Respeta las limitaciones que declare el usuario: si dice que un movimiento le
   molesta, no lo propongas ni busques equivalentes que carguen esa zona.
@@ -161,10 +165,27 @@ Deno.serve(async (req: Request) => {
   }
 
   let focusHint: string | undefined;
+  let todayHint: string | undefined;
 
   try {
     const body = await req.json();
     focusHint = body.focus;
+
+    /**
+     * Qué día es hoy PARA EL USUARIO.
+     *
+     * Esta función se ejecuta en UTC, así que `new Date().getDay()` da el día
+     * del servidor: entre las 00:00 y las 02:00 de España todavía sería ayer, y
+     * el reparto devolvería la sesión equivocada. El móvil es el único que sabe
+     * en qué día vive su dueño.
+     *
+     * No es un dato sensible —como mucho el usuario se elige el entrenamiento
+     * de otro día, algo que ya puede hacer— así que aceptarlo del cuerpo no
+     * rompe la regla de sacar la identidad del token.
+     */
+    if (typeof body.today === "string" && WEEKDAYS.includes(body.today)) {
+      todayHint = body.today;
+    }
   } catch {
     return json({ error: "Cuerpo JSON inválido" }, 400);
   }
@@ -238,7 +259,7 @@ Deno.serve(async (req: Request) => {
       messages: [
         {
           role: "user",
-          content: buildPrompt(catalog, profile, split, history, focusHint),
+          content: buildPrompt(catalog, profile, split, history, focusHint, todayHint),
         },
       ],
     });
@@ -353,8 +374,11 @@ function buildPrompt(
   } | null,
   history: unknown[],
   focusHint?: string,
+  todayHint?: string,
 ) {
-  const today = WEEKDAYS[new Date().getDay()];
+  // El día que manda el móvil, y solo si no llega, el del servidor —que va en
+  // UTC y se adelanta al cambio de día respecto a España.
+  const today = todayHint ?? WEEKDAYS[new Date().getDay()];
   const todaysSlot = split?.days.find((item) => item.day === today);
 
   const splitText = split
@@ -369,6 +393,18 @@ function buildPrompt(
           : "Hoy no es un día de entrenamiento en su reparto, así que propón una sesión ligera o del grupo que lleve más tiempo sin trabajar.",
       ].join("\n")
     : "Todavía no tiene reparto semanal: elige tú el foco según lo que lleve más tiempo sin trabajar.";
+
+  /**
+   * La última línea del mensaje, con el foco repetido.
+   *
+   * El reparto va arriba, antes del catálogo entero y del historial, y a esa
+   * distancia una instrucción pierde fuerza. Lo último que se lee pesa mucho
+   * más, así que el día vuelve a nombrarse aquí en vez de cerrar con un
+   * "diseña el entrenamiento de hoy" que no recuerda nada.
+   */
+  const cierre = todaysSlot
+    ? `Diseña el entrenamiento de hoy. Hoy le toca ${todaysSlot.label} — ${todaysSlot.focus}. La sesión entera tiene que ser de eso.`
+    : "Diseña el entrenamiento de hoy.";
   // Agrupado por patrón de movimiento: así el modelo ve de un vistazo con
   // qué puede equilibrar la sesión.
   const byPattern = new Map<string, CatalogItem[]>();
@@ -412,7 +448,7 @@ ${catalogText}
 ${historyText}
 
 ${focusHint ? `El usuario quiere centrarse hoy en: ${focusHint}\n` : ""}
-Diseña el entrenamiento de hoy.`;
+${cierre}`;
 }
 
 function describeProfile(profile: Record<string, unknown>) {
