@@ -13,9 +13,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HomeColors } from "@/features/home/home-theme";
 import { WeeklySplitCard } from "@/features/profile/components/WeeklySplitCard";
 import { useActiveSplit, useGenerateSplit } from "@/features/profile/queries";
+import { localDate } from "@/services/workout";
 import { errorMessage } from "@/utils/errors";
 import { ActiveWorkout } from "./ActiveWorkout";
-import { useGeneratePlan, useLatestPlan } from "./queries";
+import {
+  useGeneratePlan,
+  useLatestPlan,
+  usePlanStarted,
+  useRegeneratePlan,
+} from "./queries";
+
+const WEEKDAYS = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"] as const;
 
 export function WorkoutScreen() {
   const router = useRouter();
@@ -47,6 +55,30 @@ export function WorkoutScreen() {
 
   /** Hay que pasar por la semana antes de tocar el entrenamiento. */
   const faltaReparto = !pending && aprobado === false;
+
+  const { data: empezado } = usePlanStarted(pending?.id);
+  const regenerate = useRegeneratePlan();
+
+  /** El usuario ha dicho que quiere hacer igualmente el plan de otro día. */
+  const [insistir, setInsistir] = useState(false);
+
+  const hoy = WEEKDAYS[new Date().getDay()];
+  const slotDeHoy = split?.days.find((day) => day.day === hoy);
+
+  /**
+   * Un plan que se quedó pendiente de otro día.
+   *
+   * Sin esto, saltarse el lunes dejaba el Push del lunes como entrenamiento
+   * vigente el martes, el miércoles y para siempre: el desfase se acumulaba y
+   * el reparto pasaba a decir una cosa y la app otra.
+   *
+   * Solo se ofrece si no tiene ninguna serie: uno empezado es historial.
+   */
+  const planDeOtroDia =
+    pending && pending.scheduledFor !== localDate() ? pending : null;
+
+  const ofrecerCambio =
+    Boolean(planDeOtroDia) && empezado === false && !insistir;
 
   // Una sola tentativa automática por visita: si la IA falla, insistir sola
   // sería quemar llamadas sin que el usuario se entere.
@@ -92,6 +124,42 @@ export function WorkoutScreen() {
           <Text style={styles.title}>No pudimos cargar tu entrenamiento</Text>
           <Text style={styles.body}>{message(error)}</Text>
           <Action label="Reintentar" onPress={() => refetch()} />
+        </Centered>
+      ) : ofrecerCambio && planDeOtroDia ? (
+        <Centered>
+          <Text style={styles.title}>Este es de otro día</Text>
+          <Text style={styles.body}>
+            «{planDeOtroDia.title}» se quedó preparado y sin hacer.
+            {slotDeHoy
+              ? ` Hoy te toca ${slotDeHoy.label}: ${slotDeHoy.focus}.`
+              : " Hoy no es día de entrenamiento en tu reparto."}
+          </Text>
+
+          <Action
+            label="Preparar el de hoy"
+            onPress={() =>
+              regenerate.mutate(planDeOtroDia.id, {
+                onError: () => setInsistir(true),
+              })
+            }
+          />
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setInsistir(true)}
+            disabled={regenerate.isPending}
+            style={styles.secondary}
+          >
+            <Text style={styles.secondaryText}>
+              {regenerate.isPending
+                ? "Preparando…"
+                : `Hacer «${planDeOtroDia.title}» igualmente`}
+            </Text>
+          </TouchableOpacity>
+
+          {regenerate.error && (
+            <Text style={styles.body}>{message(regenerate.error)}</Text>
+          )}
         </Centered>
       ) : faltaReparto ? (
         <ScrollView contentContainerStyle={styles.splitStep}>

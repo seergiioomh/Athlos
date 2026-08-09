@@ -166,6 +166,7 @@ Deno.serve(async (req: Request) => {
 
   let focusHint: string | undefined;
   let todayHint: string | undefined;
+  let todayDate: string | undefined;
 
   try {
     const body = await req.json();
@@ -185,6 +186,20 @@ Deno.serve(async (req: Request) => {
      */
     if (typeof body.today === "string" && WEEKDAYS.includes(body.today)) {
       todayHint = body.today;
+    }
+
+    /**
+     * La fecha local del usuario, para `scheduled_for`.
+     *
+     * La columna tiene `default current_date`, que es la del servidor y va en
+     * UTC. Esa fecha se usa para decidir si un plan pendiente es de otro día,
+     * así que tiene que ser la suya o la comparación se equivoca de madrugada.
+     */
+    if (
+      typeof body.today_date === "string" &&
+      /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(body.today_date)
+    ) {
+      todayDate = body.today_date;
     }
   } catch {
     return json({ error: "Cuerpo JSON inválido" }, 400);
@@ -300,6 +315,8 @@ Deno.serve(async (req: Request) => {
       focus: plan.focus,
       source: "ai",
       ai_model: MODEL,
+      // Si el móvil no la manda, la columna aplica su `default current_date`.
+      ...(todayDate ? { scheduled_for: todayDate } : {}),
     })
     .select("id")
     .single();

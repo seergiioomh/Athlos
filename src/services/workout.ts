@@ -21,6 +21,7 @@ const toDomain = (row: PlanWithExercises): WorkoutPlan => ({
   title: row.title,
   focus: row.focus ?? "",
   completedAt: row.completed_at,
+  scheduledFor: row.scheduled_for,
   exercises: [...row.plan_exercises]
     // El orden lo manda `position`; PostgREST no garantiza el de la relación.
     .sort((a, b) => a.position - b.position)
@@ -121,6 +122,19 @@ export async function discardPlan(
 
 const WEEKDAYS = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"] as const;
 
+/**
+ * La fecha de hoy en la zona del usuario, como AAAA-MM-DD.
+ *
+ * Se construye por componentes y no con `toISOString()`, que convierte a UTC:
+ * a las 23:00 en España devolvería el día siguiente.
+ */
+export const localDate = (date = new Date()) =>
+  [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+
 /** Pide un plan nuevo a la IA. La clave de Anthropic vive en la función. */
 export async function generatePlan(
   userId: string,
@@ -133,6 +147,7 @@ export async function generatePlan(
       // usuario: de madrugada le daría la sesión de ayer. El día lo pone el
       // móvil, que es el único que conoce su huso.
       today: WEEKDAYS[new Date().getDay()],
+      today_date: localDate(),
     },
   });
 

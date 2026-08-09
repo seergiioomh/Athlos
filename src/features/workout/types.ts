@@ -23,6 +23,11 @@ export interface WorkoutPlan {
   focus: string;
   /** Null mientras el entrenamiento siga pendiente de hacerse. */
   completedAt: string | null;
+  /**
+   * El día para el que se preparó, en formato AAAA-MM-DD y en la zona del
+   * usuario. Sirve para saber si un plan pendiente se quedó de otro día.
+   */
+  scheduledFor: string;
   exercises: SuggestedExercise[];
 }
 
