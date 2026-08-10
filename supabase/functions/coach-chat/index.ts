@@ -124,7 +124,7 @@ const TOOLS = [
   {
     name: "cambiar_reparto_semanal",
     description:
-      "Propone un reparto semanal nuevo: qué le toca cada día que entrena. Úsala cuando el cliente diga que la estructura de su semana no le encaja, que cambia sus días disponibles, o que quiere otro tipo de rutina. Devuelve el reparto COMPLETO, no solo el día que cambia.",
+      "Propone un ciclo de entrenamiento nuevo: qué le toca en cada sesión. Es una rotación numerada, no un calendario: sesión 1, 2, 3... y al terminar la última se vuelve a la primera. Úsala cuando el cliente diga que la estructura no le encaja, que cambian sus días disponibles, o que quiere otro tipo de rutina. Devuelve el ciclo COMPLETO, no solo la sesión que cambia.",
     input_schema: {
       type: "object",
       properties: {
@@ -136,27 +136,28 @@ const TOOLS = [
           type: "string",
           description: "Dos o tres frases explicándole por qué este reparto.",
         },
-        days: {
+        cycle: {
           type: "array",
           description:
-            "Una entrada por día que entrena, en orden de semana. Solo días que tenga disponibles.",
+            "Las sesiones del ciclo, en el orden en que se hacen. Tantas como días entrene por semana.",
           items: {
             type: "object",
             properties: {
-              day: {
-                type: "string",
-                enum: ["lun", "mar", "mie", "jue", "vie", "sab", "dom"],
+              position: {
+                type: "integer",
+                description:
+                  "Orden dentro del ciclo, empezando en 1 y sin saltos ni repeticiones.",
               },
               label: { type: "string" },
               focus: { type: "string" },
             },
-            required: ["day", "label", "focus"],
+            required: ["position", "label", "focus"],
             additionalProperties: false,
           },
         },
         motivo: { type: "string" },
       },
-      required: ["name", "days", "motivo"],
+      required: ["name", "cycle", "motivo"],
       additionalProperties: false,
     },
   },
@@ -177,6 +178,11 @@ const TOOLS = [
       required: ["limitations", "motivo"],
       additionalProperties: false,
     },
+    // Va en la última herramienta a propósito: la caché de la API cubre TODO
+    // lo que viene antes del punto marcado, así que ponerlo aquí cachea el
+    // array de herramientas entero de una vez. Las cuatro son fijas, iguales
+    // para cualquier cliente en cualquier mensaje.
+    cache_control: { type: "ephemeral" },
   },
 ];
 
@@ -266,9 +272,27 @@ Deno.serve(async (req: Request) => {
   const request = {
     model: MODEL,
     max_tokens: 1500,
+    /**
+     * Dos bloques, dos cachés distintas.
+     *
+     * `SYSTEM` no cambia nunca: es el mismo texto para cualquier cliente, en
+     * cualquier mensaje. Va como su propio bloque cacheado para que ese ahorro
+     * no dependa de que el contexto de después también coincida.
+     *
+     * `context` sí cambia por usuario, pero dentro de una misma conversación
+     * suele ser idéntico de un mensaje al siguiente: mismo perfil, mismo
+     * ciclo, mismo plan pendiente, mismo catálogo. Se cachea aparte para que
+     * cada mensaje nuevo de la conversación aproveche lo que ya se mandó en
+     * el anterior, en vez de volver a pagarlo entero cada vez que el usuario
+     * escribe algo.
+     */
     system: [
-      { type: "text" as const, text: SYSTEM },
-      { type: "text" as const, text: `Contexto del cliente:\n${context}` },
+      { type: "text" as const, text: SYSTEM, cache_control: { type: "ephemeral" as const } },
+      {
+        type: "text" as const,
+        text: `Contexto del cliente:\n${context}`,
+        cache_control: { type: "ephemeral" as const },
+      },
     ],
     tools: TOOLS,
   };
@@ -300,32 +324,22 @@ Deno.serve(async (req: Request) => {
       ...(toolUse.input as Record<string, unknown>),
     };
 
-    // La herramienta no ejecuta nada: le devolvemos que la propuesta ya está
-    // delante del cliente para que cierre con su explicación.
-    try {
-      const closing = await anthropic.messages.create({
-        ...request,
-        messages: [
-          ...conversation,
-          { role: "assistant", content: response.content as unknown },
-          {
-            role: "user",
-            content: [
-              {
-                type: "tool_result",
-                tool_use_id: toolUse.id,
-                content:
-                  "Propuesta mostrada al cliente. Está pendiente de que la confirme; no ha cambiado nada todavía.",
-              },
-            ] as unknown,
-          },
-        ],
-      });
-
-      reply = textOf(closing) || reply;
-    } catch (error) {
-      console.error("Fallo cerrando la propuesta", error);
-    }
+    /**
+     * No se hace una segunda llamada para redactar el cierre.
+     *
+     * El prompt de sistema ya le pide explícitamente "después de proponer,
+     * explica en una o dos frases por qué" EN LA MISMA respuesta que hace la
+     * propuesta — Claude puede devolver texto y una llamada a herramienta a
+     * la vez, y de hecho es lo que se le pide que haga. `reply` ya viene de
+     * `textOf(response)` unas líneas más arriba, así que ese texto está aquí
+     * salvo que el modelo no lo escribiera.
+     *
+     * Antes había una llamada extra completa solo para pedir esa frase de
+     * cierre, que pagaba otra vez el sistema, el contexto y la conversación
+     * entera por una respuesta que casi siempre ya se tenía. El resguardo de
+     * más abajo (`if (!reply) ...`) sigue cubriendo el caso raro en que el
+     * modelo proponga sin decir nada.
+     */
   }
 
   if (!reply) {
@@ -400,7 +414,11 @@ async function loadContext(
   const { data: catalog } = await supabase
     .from("exercises")
     .select("slug, name, muscle_group, equipment, pattern")
-    .in("equipment", EQUIPMENT_BY_PLACE[place] ?? EQUIPMENT_BY_PLACE.gimnasio);
+    .in("equipment", EQUIPMENT_BY_PLACE[place] ?? EQUIPMENT_BY_PLACE.gimnasio)
+    // Orden fijo por la misma razón que en generate-workout: sin él, el
+    // bloque de contexto cambiaría de bytes entre mensajes de la misma
+    // conversación y la caché nunca coincidiría con el turno anterior.
+    .order("slug");
 
   // Las valoraciones (nota, energía, molestias, comentario) explican por qué
   // una sesión salió floja mucho mejor que los kilos levantados.
@@ -460,22 +478,22 @@ async function loadContext(
 
   const { data: split } = await supabase
     .from("weekly_splits")
-    .select("name, rationale, days")
+    .select("name, rationale, cycle")
     .eq("user_id", userId)
-    .eq("active", true)
+    .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   parts.push(
     split
-      ? `Reparto semanal vigente:\n${JSON.stringify(split, null, 2)}`
-      : "Todavía no tiene reparto semanal.",
+      ? `Ciclo de entrenamiento vigente, en orden de rotación:\n${JSON.stringify(split)}`
+      : "Todavía no tiene ciclo de entrenamiento.",
   );
 
   parts.push(
     plan
-      ? `Entrenamiento pendiente (los "id" son los que hay que usar en las herramientas):\n${JSON.stringify(plan, null, 2)}`
+      ? `Entrenamiento pendiente (los "id" son los que hay que usar en las herramientas):\n${JSON.stringify(plan)}`
       : "No tiene ningún entrenamiento pendiente, así que no puedes proponer cambios sobre él.",
   );
 
@@ -490,7 +508,7 @@ async function loadContext(
 
   parts.push(
     sessions?.length
-      ? `Últimas sesiones registradas:\n${JSON.stringify(sessions, null, 2)}`
+      ? `Últimas sesiones registradas:\n${JSON.stringify(sessions)}`
       : "Todavía no ha registrado ninguna sesión.",
   );
 

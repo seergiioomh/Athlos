@@ -1,7 +1,16 @@
-// Diseña el reparto semanal del usuario: qué toca cada día que entrena.
+// Diseña el ciclo de entrenamiento del usuario: qué toca en cada sesión.
 //
-// Es la estructura que ordena las sesiones. `generate-workout` la lee para
-// saber qué le corresponde a hoy, en lugar de decidir el foco al vuelo.
+// Es una rotación, no un calendario: sesión 1, 2, 3... y al terminar la última
+// se vuelve a la primera. `generate-workout` la lee para saber cuál toca, en
+// lugar de decidir el foco al vuelo.
+//
+// Se numeran las sesiones y no se atan a días de la semana a propósito: así
+// saltarse un entrenamiento no desfasa nada, porque la siguiente sigue siendo
+// la siguiente.
+//
+// Lo que se guarda es un BORRADOR. El ciclo vigente no se toca hasta que el
+// usuario aprueba el nuevo desde la app: si se activara aquí, una propuesta
+// que no llega a mirar le cambiaría los entrenamientos por su cuenta.
 //
 // Desplegar:
 //   supabase functions deploy generate-split --use-api
@@ -31,16 +40,17 @@ const splitSchema = {
       description:
         "Dos o tres frases, en español y dirigidas al usuario, explicando por qué este reparto encaja con él.",
     },
-    days: {
+    cycle: {
       type: "array",
       description:
-        "Una entrada por cada día que el usuario puede entrenar, en el mismo orden de la semana.",
+        "Las sesiones del ciclo, en el orden en que se hacen. Tantas como días entrene por semana. Al terminar la última se vuelve a la primera.",
       items: {
         type: "object",
         properties: {
-          day: {
-            type: "string",
-            enum: ["lun", "mar", "mie", "jue", "vie", "sab", "dom"],
+          position: {
+            type: "integer",
+            description:
+              "Orden dentro del ciclo, empezando en 1 y sin saltos ni repeticiones.",
           },
           label: {
             type: "string",
@@ -51,20 +61,26 @@ const splitSchema = {
             description: "Grupos que se trabajan, separados por comas.",
           },
         },
-        required: ["day", "label", "focus"],
+        required: ["position", "label", "focus"],
         additionalProperties: false,
       },
     },
   },
-  required: ["name", "rationale", "days"],
+  required: ["name", "rationale", "cycle"],
   additionalProperties: false,
 } as const;
 
-const SYSTEM = `Eres el entrenador personal de ATHLOS. Diseñas el reparto semanal
-de un cliente: qué grupo muscular le toca cada día que puede entrenar.
+const SYSTEM = `Eres el entrenador personal de ATHLOS. Diseñas el ciclo de
+entrenamiento de un cliente: qué grupo muscular le toca en cada sesión.
 
 Reglas:
-- Usa EXACTAMENTE los días que el cliente dice tener disponibles, ni uno más.
+- El ciclo es una ROTACIÓN, no un calendario. Numeras las sesiones 1, 2, 3... y
+  al terminar la última se vuelve a la primera. No las ates a días de la semana:
+  el cliente hace la siguiente cuando entrena, sea el día que sea.
+- Haz tantas sesiones como días por semana entrene, ni una más.
+- Los días concretos que tiene disponibles te dicen cómo reparte el descanso
+  —no es lo mismo lunes, martes y miércoles que lunes, miércoles y viernes—,
+  así que úsalos para decidir cuánto puede apretar, no para asignar sesiones.
 - Elige el reparto que encaje con su número de días, no el que esté de moda:
   con 2 o 3 días, full body o torso-pierna rinden más que un PPL incompleto;
   con 4, torso-pierna o upper/lower; con 5 o 6, Push/Pull/Legs.
@@ -137,12 +153,27 @@ Deno.serve(async (req: Request) => {
       thinking: { type: "adaptive" },
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-      system: SYSTEM,
+      // Igual que en generate-workout: el texto no cambia nunca, así que se
+      // marca para caché.
+      system: [
+        { type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } },
+      ],
       output_config: { format: { type: "json_schema", schema: splitSchema } },
       messages: [
         {
           role: "user",
-          content: `Perfil del cliente:\n${JSON.stringify(profile, null, 2)}\n\nDiseña su reparto semanal.`,
+          content: [
+            {
+              type: "text",
+              // También cacheable. "Prefiero otro ciclo" deja al usuario
+              // regenerando varias veces seguidas sin haber cambiado nada de
+              // su perfil entre un intento y el siguiente: ese reintento es
+              // el mismo bloque, palabra por palabra.
+              text: `Perfil del cliente:\n${JSON.stringify(profile)}`,
+              cache_control: { type: "ephemeral" },
+            },
+            { type: "text", text: "Diseña su ciclo de entrenamiento." },
+          ],
         },
       ],
     });
@@ -163,23 +194,41 @@ Deno.serve(async (req: Request) => {
   const split = JSON.parse(textBlock.text) as {
     name: string;
     rationale: string;
-    days: { day: string; label: string; focus: string }[];
+    cycle: { position: number; label: string; focus: string }[];
   };
 
-  // El esquema garantiza la forma, no que se ceñiera a los días disponibles.
-  const invalid = split.days.filter((item) => !days.includes(item.day));
+  /**
+   * El esquema garantiza la forma, no el contenido: puede devolver posiciones
+   * repetidas, con saltos, o más sesiones que días entrena.
+   *
+   * Un ciclo con un hueco se rompe al dar la vuelta —de la 3 saltaría a la 5 y
+   * nunca encontraría la 4—, así que se exige exactamente 1..N.
+   */
+  const posiciones = [...split.cycle]
+    .map((item) => item.position)
+    .sort((a, b) => a - b);
 
-  if (invalid.length > 0 || split.days.length === 0) {
-    console.error("Días fuera de los disponibles", invalid);
-    return json({ error: "El reparto generado no es válido" }, 502);
+  const cicloValido =
+    posiciones.length === days.length &&
+    posiciones.every((position, index) => position === index + 1);
+
+  if (!cicloValido) {
+    console.error("Ciclo inválido", { posiciones, esperadas: days.length });
+    return json({ error: "El ciclo generado no es válido" }, 502);
   }
 
-  // Solo un reparto vigente: el anterior pasa a historial.
+  /**
+   * El ciclo vigente NO se toca: esto es una propuesta.
+   *
+   * Lo que sí se limpia son los borradores anteriores sin aprobar. Si no, pedir
+   * otro ciclo dos veces dejaría dos propuestas vivas y la app enseñaría la que
+   * saliera primero.
+   */
   await supabase
     .from("weekly_splits")
-    .update({ active: false })
+    .delete()
     .eq("user_id", userId)
-    .eq("active", true);
+    .eq("status", "draft");
 
   const { data: created, error: insertError } = await supabase
     .from("weekly_splits")
@@ -187,17 +236,19 @@ Deno.serve(async (req: Request) => {
       user_id: userId,
       name: split.name,
       rationale: split.rationale,
-      days: split.days,
+      cycle: split.cycle,
+      status: "draft",
+      active: false,
     })
     .select("id")
     .single();
 
   if (insertError || !created) {
-    console.error("Fallo guardando el reparto", insertError);
-    return json({ error: "No se pudo guardar el reparto" }, 500);
+    console.error("Fallo guardando el ciclo", insertError);
+    return json({ error: "No se pudo guardar el ciclo" }, 500);
   }
 
-  return json({ split_id: created.id, split }, 200);
+  return json({ cycle_id: created.id, cycle: split }, 200);
 });
 
 function json(body: unknown, status: number) {

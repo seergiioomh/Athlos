@@ -1,4 +1,4 @@
-// Genera el entrenamiento del día con Claude y lo guarda como plan.
+// Genera la siguiente sesión del ciclo con Claude y la guarda como plan.
 //
 // Corre en Deno, dentro de Supabase. La clave de Anthropic vive aquí como
 // secreto del proyecto y nunca llega al móvil:
@@ -109,6 +109,11 @@ Reglas:
   día lo decide él, no tú: si hoy le toca Pull, la sesión es de Pull entera. No
   es una sugerencia ni un punto de partida. Solo eliges el foco cuando no hay
   reparto, o cuando hoy no es un día de entrenamiento suyo.
+- EL CICLO MANDA. Se te dice qué sesión le toca, y el foco lo decide ella, no
+  tú: si le toca Pull, la sesión es de Pull entera. No es una sugerencia ni un
+  punto de partida. Solo eliges el foco cuando no hay ciclo.
+- El ciclo es una rotación, no un calendario: no hables de días de la semana ni
+  supongas nada por la fecha de hoy.
 - Elige ejercicios ÚNICAMENTE del catálogo que se te da, usando su slug exacto.
 - Respeta las limitaciones que declare el usuario: si dice que un movimiento le
   molesta, no lo propongas ni busques equivalentes que carguen esa zona.
@@ -165,42 +170,13 @@ Deno.serve(async (req: Request) => {
   }
 
   let focusHint: string | undefined;
-  let todayHint: string | undefined;
-  let todayDate: string | undefined;
 
   try {
     const body = await req.json();
     focusHint = body.focus;
 
-    /**
-     * Qué día es hoy PARA EL USUARIO.
-     *
-     * Esta función se ejecuta en UTC, así que `new Date().getDay()` da el día
-     * del servidor: entre las 00:00 y las 02:00 de España todavía sería ayer, y
-     * el reparto devolvería la sesión equivocada. El móvil es el único que sabe
-     * en qué día vive su dueño.
-     *
-     * No es un dato sensible —como mucho el usuario se elige el entrenamiento
-     * de otro día, algo que ya puede hacer— así que aceptarlo del cuerpo no
-     * rompe la regla de sacar la identidad del token.
-     */
-    if (typeof body.today === "string" && WEEKDAYS.includes(body.today)) {
-      todayHint = body.today;
-    }
-
-    /**
-     * La fecha local del usuario, para `scheduled_for`.
-     *
-     * La columna tiene `default current_date`, que es la del servidor y va en
-     * UTC. Esa fecha se usa para decidir si un plan pendiente es de otro día,
-     * así que tiene que ser la suya o la comparación se equivoca de madrugada.
-     */
-    if (
-      typeof body.today_date === "string" &&
-      /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(body.today_date)
-    ) {
-      todayDate = body.today_date;
-    }
+    // Ya no se recibe ningún día: el ciclo es una rotación y no depende de la
+    // fecha, así que no hay nada que el móvil tenga que contarle al servidor.
   } catch {
     return json({ error: "Cuerpo JSON inválido" }, 400);
   }
@@ -235,21 +211,65 @@ Deno.serve(async (req: Request) => {
   const { data: catalog, error: catalogError } = await supabase
     .from("exercises")
     .select("id, slug, name, muscle_group, is_bodyweight, equipment, pattern, is_compound")
-    .in("equipment", allowedEquipment(profile?.equipment as string | null));
+    .in("equipment", allowedEquipment(profile?.equipment as string | null))
+    // Sin orden explícito, Postgres no garantiza devolver siempre las mismas
+    // filas en el mismo orden. El catálogo se manda como bloque cacheable en
+    // el prompt: si el orden bailara, el texto cambiaría de bytes entre
+    // llamadas y la caché nunca coincidiría con la de antes.
+    .order("slug");
 
   if (catalogError || !catalog?.length) {
     return json({ error: "No se pudo leer el catálogo de ejercicios" }, 500);
   }
 
-  // El reparto semanal manda: si hoy toca Pull, la sesión es de Pull.
-  const { data: split } = await supabase
+  // Solo el ciclo aprobado por el usuario. Un borrador sin aceptar no debe
+  // decidir sus entrenamientos.
+  const { data: cycle } = await supabase
     .from("weekly_splits")
-    .select("name, rationale, days")
+    .select("id, name, rationale, cycle")
     .eq("user_id", userId)
-    .eq("active", true)
+    .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  const sesiones = (cycle?.cycle ?? []) as {
+    position: number;
+    label: string;
+    focus: string;
+  }[];
+
+  /**
+   * Cuál toca de la rotación.
+   *
+   * La siguiente a la del último entrenamiento COMPLETADO de ESTE ciclo. Se
+   * mira lo completado y no lo generado: un plan que se preparó y no se hizo no
+   * consume su turno, que es justo lo que hacía que saltarse un día desfasara
+   * el reparto en el modelo anterior.
+   *
+   * Y se filtra por `cycle_id` porque al cambiar de ciclo las posiciones viejas
+   * dejan de significar nada: se empieza otra vez por la primera.
+   */
+  let posicion = 1;
+
+  if (cycle && sesiones.length > 0) {
+    const { data: ultimo } = await supabase
+      .from("workout_plans")
+      .select("cycle_position")
+      .eq("user_id", userId)
+      .eq("cycle_id", cycle.id)
+      .not("completed_at", "is", null)
+      .not("cycle_position", "is", null)
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const previa = ultimo?.cycle_position as number | null | undefined;
+
+    // El módulo protege de una posición mayor que el ciclo, que puede quedar
+    // guardada si el ciclo se rehizo más corto con el mismo id.
+    posicion = previa ? (previa % sesiones.length) + 1 : 1;
+  }
 
   const history = await recentHistory(supabase, userId);
 
@@ -267,14 +287,20 @@ Deno.serve(async (req: Request) => {
       // el modelo de respaldo en vez de devolvernos un hueco.
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-      system: SYSTEM,
+      // El prompt de sistema no cambia nunca: es el mismo texto para
+      // cualquier usuario, cualquier día. `cache_control` le dice a la API
+      // que lo recuerde; si vuelve a aparecer igual en otra llamada dentro de
+      // la ventana de caché, se cobra a una fracción del precio normal.
+      system: [
+        { type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } },
+      ],
       output_config: {
         format: { type: "json_schema", schema: planSchema },
       },
       messages: [
         {
           role: "user",
-          content: buildPrompt(catalog, profile, split, history, focusHint, todayHint),
+          content: buildPrompt(catalog, profile, sesiones, cycle?.name ?? null, posicion, history, focusHint),
         },
       ],
     });
@@ -315,8 +341,9 @@ Deno.serve(async (req: Request) => {
       focus: plan.focus,
       source: "ai",
       ai_model: MODEL,
-      // Si el móvil no la manda, la columna aplica su `default current_date`.
-      ...(todayDate ? { scheduled_for: todayDate } : {}),
+      // De dónde salió: es lo que permite saber cuál toca la próxima vez sin
+      // depender de fechas ni de días de la semana.
+      ...(cycle ? { cycle_id: cycle.id, cycle_position: posicion } : {}),
     })
     .select("id")
     .single();
@@ -379,49 +406,44 @@ interface CatalogItem {
   is_compound: boolean;
 }
 
-const WEEKDAYS = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"];
-
 function buildPrompt(
   catalog: CatalogItem[],
   profile: Record<string, unknown> | null,
-  split: {
-    name: string;
-    rationale: string | null;
-    days: { day: string; label: string; focus: string }[];
-  } | null,
+  sesiones: { position: number; label: string; focus: string }[],
+  cicloNombre: string | null,
+  posicion: number,
   history: unknown[],
   focusHint?: string,
-  todayHint?: string,
 ) {
-  // El día que manda el móvil, y solo si no llega, el del servidor —que va en
-  // UTC y se adelanta al cambio de día respecto a España.
-  const today = todayHint ?? WEEKDAYS[new Date().getDay()];
-  const todaysSlot = split?.days.find((item) => item.day === today);
+  const sesion = sesiones.find((item) => item.position === posicion);
 
-  const splitText = split
+  const splitText = sesiones.length
     ? [
-        `Reparto semanal vigente: ${split.name}`,
-        ...split.days.map(
+        `Ciclo de entrenamiento vigente: ${cicloNombre ?? "sin nombre"}`,
+        ...sesiones.map(
           (item) =>
-            `- ${item.day}: ${item.label} (${item.focus})${item.day === today ? "  ← HOY" : ""}`,
+            `- Sesión ${item.position}: ${item.label} (${item.focus})${
+              item.position === posicion ? "  <-- LE TOCA ESTA" : ""
+            }`,
         ),
-        todaysSlot
-          ? `Hoy le toca ${todaysSlot.label}: ${todaysSlot.focus}. Cíñete a eso.`
-          : "Hoy no es un día de entrenamiento en su reparto, así que propón una sesión ligera o del grupo que lleve más tiempo sin trabajar.",
+        sesion
+          ? `Le toca la sesión ${sesion.position}, ${sesion.label}: ${sesion.focus}. Cíñete a eso.`
+          : "No se pudo determinar qué sesión le toca: elige tú el foco según lo que lleve más tiempo sin trabajar.",
       ].join("\n")
-    : "Todavía no tiene reparto semanal: elige tú el foco según lo que lleve más tiempo sin trabajar.";
+    : "Todavía no tiene ciclo de entrenamiento: elige tú el foco según lo que lleve más tiempo sin trabajar.";
 
   /**
    * La última línea del mensaje, con el foco repetido.
    *
-   * El reparto va arriba, antes del catálogo entero y del historial, y a esa
+   * El ciclo va arriba, antes del catálogo entero y del historial, y a esa
    * distancia una instrucción pierde fuerza. Lo último que se lee pesa mucho
-   * más, así que el día vuelve a nombrarse aquí en vez de cerrar con un
-   * "diseña el entrenamiento de hoy" que no recuerda nada.
+   * más, así que la sesión vuelve a nombrarse aquí en vez de cerrar con un
+   * "diseña el entrenamiento" que no recuerda nada.
    */
-  const cierre = todaysSlot
-    ? `Diseña el entrenamiento de hoy. Hoy le toca ${todaysSlot.label} — ${todaysSlot.focus}. La sesión entera tiene que ser de eso.`
+  const cierre = sesion
+    ? `Diseña esta sesión. Le toca ${sesion.label} — ${sesion.focus}. La sesión entera tiene que ser de eso.`
     : "Diseña el entrenamiento de hoy.";
+
   // Agrupado por patrón de movimiento: así el modelo ve de un vistazo con
   // qué puede equilibrar la sesión.
   const byPattern = new Map<string, CatalogItem[]>();
@@ -448,24 +470,44 @@ function buildPrompt(
     ? describeProfile(profile)
     : "Sin datos del usuario: usa cargas conservadoras y un enfoque general.";
 
+  // Sin sangría: la indentación de `JSON.stringify(x, null, 2)` es puro
+  // relleno para un modelo, que lee el JSON igual de bien compacto. En un
+  // historial con varias sesiones y series anidadas, la diferencia no es
+  // menor.
   const historyText =
     history.length > 0
-      ? JSON.stringify(history, null, 2)
+      ? JSON.stringify(history)
       : "Sin sesiones registradas todavía: es su primer entrenamiento.";
 
-  return `Perfil del usuario:
+  const rest = `Perfil del usuario:
 ${profileText}
 
 ${splitText}
-
-Catálogo de ejercicios disponible:
-${catalogText}
 
 Últimas sesiones del usuario (más reciente primero):
 ${historyText}
 
 ${focusHint ? `El usuario quiere centrarse hoy en: ${focusHint}\n` : ""}
 ${cierre}`;
+
+  /**
+   * El catálogo va como bloque propio, delante de todo lo demás, y marcado
+   * para caché.
+   *
+   * Solo hay tres catálogos posibles —uno por material— y son idénticos para
+   * cualquier usuario con el mismo. Separarlo del resto del mensaje permite
+   * que, si otra llamada reciente mandó exactamente este mismo bloque, se
+   * cobre a una fracción del precio en vez de precio completo. El resto del
+   * mensaje sí cambia en cada llamada, así que va sin marcar, después.
+   */
+  return [
+    {
+      type: "text" as const,
+      text: `Catálogo de ejercicios disponible:\n${catalogText}`,
+      cache_control: { type: "ephemeral" as const },
+    },
+    { type: "text" as const, text: rest },
+  ];
 }
 
 function describeProfile(profile: Record<string, unknown>) {
