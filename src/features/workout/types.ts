@@ -7,6 +7,14 @@ export interface SuggestedExercise {
   id: string;
   /** id del ejercicio en el catálogo, que es lo que se guarda en cada serie. */
   exerciseId: string;
+  /**
+   * Identificador estable del ejercicio, el mismo en todas las cuentas.
+   *
+   * Es lo que viaja al compartir un entrenamiento: los ids son filas de una
+   * base concreta, pero el slug identifica el ejercicio en sí, así que el
+   * móvil que lo recibe puede resolverlo contra su propio catálogo.
+   */
+  slug: string;
   name: string;
   muscleGroup: string;
   sets: number;
@@ -28,6 +36,10 @@ export interface WorkoutPlan {
    * usuario. Sirve para saber si un plan pendiente se quedó de otro día.
    */
   scheduledFor: string;
+  /** Ver `WorkoutPlanRow.source`. */
+  source: "ai" | "manual" | "shared";
+  /** Nombre de quien lo compartió, si vino por enlace. */
+  sharedBy: string | null;
   exercises: SuggestedExercise[];
 }
 

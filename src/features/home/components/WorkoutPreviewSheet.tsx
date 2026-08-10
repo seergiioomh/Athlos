@@ -1,17 +1,22 @@
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Share01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
+import { useProfile } from "@/features/onboarding/queries";
+import { encodeWorkout } from "@/features/workout/share";
 import type { WorkoutPlan } from "@/features/workout/types";
 import { HomeColors } from "../home-theme";
+import { PlanExerciseList } from "./PlanExerciseList";
 
 interface Props {
   plan: WorkoutPlan | null;
@@ -20,21 +25,43 @@ interface Props {
   onStart: () => void;
 }
 
-const formatWeight = (kg: number) =>
-  kg === 0 ? "Peso corporal" : `${String(kg).replace(".", ",")} kg`;
-
-const formatRest = (seconds: number) =>
-  seconds >= 60 && seconds % 60 === 0
-    ? `${seconds / 60} min`
-    : `${seconds} s`;
-
 export function WorkoutPreviewSheet({
   plan,
   visible,
   onClose,
   onStart,
 }: Props) {
+  const { data: profile } = useProfile();
+
   if (!plan) return null;
+
+  /**
+   * Comparte el entrenamiento entero dentro del enlace.
+   *
+   * Se usa el menú del sistema, así que desde el móvil da igual si acaba
+   * yendo por WhatsApp, por Mensajes o por AirDrop: eso lo elige quien
+   * comparte, y a la app no le afecta.
+   */
+  const share = async () => {
+    const link = encodeWorkout(plan, profile?.display_name ?? "");
+    const intro = `Te paso mi entrenamiento de hoy: ${plan.title}`;
+
+    try {
+      await Share.share(
+        // En iOS, `url` viaja como un elemento propio del selector nativo,
+        // separado de `message`: es lo que hace que WhatsApp lo reconozca
+        // como un enlace tocable en vez de una URL suelta dentro del texto.
+        // En Android ese campo se ignora del todo, así que ahí el enlace
+        // tiene que ir metido en el propio mensaje.
+        Platform.OS === "ios"
+          ? { message: intro, url: link }
+          : { message: `${intro}\n\n${link}` }
+      );
+    } catch {
+      // Cancelar el menú de compartir lanza en iOS. No es un error que
+      // merezca contarle nada al usuario.
+    }
+  };
 
   return (
     <Modal
@@ -55,6 +82,23 @@ export function WorkoutPreviewSheet({
             <Text style={styles.title}>{plan.title}</Text>
             <Text style={styles.focus}>{plan.focus}</Text>
           </View>
+
+          {/* Compartir va aquí y no abajo: la acción principal de esta hoja
+              es empezar, y un segundo botón grande competiría con ella. */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={share}
+            hitSlop={10}
+            style={styles.close}
+            accessibilityLabel="Compartir este entrenamiento"
+          >
+            <HugeiconsIcon
+              icon={Share01Icon}
+              size={18}
+              color={HomeColors.primary}
+              strokeWidth={2}
+            />
+          </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.8}
@@ -77,36 +121,7 @@ export function WorkoutPreviewSheet({
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         >
-          {plan.exercises.map((exercise, index) => (
-            <View key={exercise.id} style={styles.exercise}>
-              <View style={styles.position}>
-                <Text style={styles.positionText}>{index + 1}</Text>
-              </View>
-
-              <View style={styles.details}>
-                <Text style={styles.name}>{exercise.name}</Text>
-                <Text style={styles.muscle}>{exercise.muscleGroup}</Text>
-
-                <View style={styles.metrics}>
-                  <Text style={styles.metric}>
-                    {exercise.sets} × {exercise.targetReps}
-                  </Text>
-                  <Text style={styles.separator}>·</Text>
-                  <Text style={styles.metric}>
-                    {formatWeight(exercise.targetWeightKg)}
-                  </Text>
-                  <Text style={styles.separator}>·</Text>
-                  <Text style={styles.metric}>
-                    {formatRest(exercise.restSeconds)} descanso
-                  </Text>
-                </View>
-
-                {exercise.aiNote ? (
-                  <Text style={styles.note}>{exercise.aiNote}</Text>
-                ) : null}
-              </View>
-            </View>
-          ))}
+          <PlanExerciseList exercises={plan.exercises} />
         </ScrollView>
 
         <TouchableOpacity
@@ -178,58 +193,6 @@ const styles = StyleSheet.create({
 
   list: { marginTop: 18 },
   listContent: { gap: 10, paddingBottom: 8 },
-
-  exercise: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: HomeColors.surface,
-  },
-
-  position: {
-    width: 26,
-    height: 26,
-    borderRadius: 9,
-    backgroundColor: HomeColors.primarySoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  positionText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: HomeColors.primary,
-  },
-
-  details: { flex: 1 },
-
-  name: { fontSize: 16, fontWeight: "700", color: HomeColors.text },
-  muscle: { marginTop: 1, fontSize: 12, color: HomeColors.textSecondary },
-
-  metrics: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-
-  metric: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: HomeColors.text,
-    fontVariant: ["tabular-nums"],
-  },
-
-  separator: { fontSize: 13, color: HomeColors.textSecondary },
-
-  note: {
-    marginTop: 8,
-    fontSize: 12,
-    lineHeight: 17,
-    color: HomeColors.primary,
-  },
 
   start: {
     marginTop: 16,

@@ -4,9 +4,11 @@ import {
   discardPlan,
   fetchLatestPlan,
   generatePlan,
+  importSharedWorkout,
   openSession,
   planHasLoggedSets,
 } from "@/services/workout";
+import type { SharedWorkout } from "./share";
 import { useUserId } from "@/features/auth/session";
 
 export const workoutKeys = {
@@ -36,6 +38,24 @@ export function useGeneratePlan() {
       queryClient.setQueryData(workoutKeys.plan(userId), plan);
     },
     // Generar cuesta una llamada a la IA: si falla, que lo decida el usuario.
+    retry: false,
+  });
+}
+
+/** Acepta un entrenamiento que llegó por enlace y lo guarda como propio. */
+export function useImportSharedWorkout() {
+  const userId = useUserId()!;
+
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (shared: SharedWorkout) =>
+      importSharedWorkout(userId, shared),
+    onSuccess: () => {
+      // No toca `workoutKeys.plan`: el plan del ciclo sigue siendo el mismo y
+      // volver a leerlo solo serviría para confirmar que no ha cambiado.
+      queryClient.invalidateQueries({ queryKey: ["home"] });
+    },
     retry: false,
   });
 }

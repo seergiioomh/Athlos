@@ -1,9 +1,10 @@
 import { supabase } from "@/lib/supabase";
 import type { PlanExerciseWithExercise, WorkoutPlanRow } from "@/types/database";
+import type { SharedWorkout } from "@/features/workout/share";
 import type { CompletedSet, WorkoutPlan } from "@/features/workout/types";
 
 const PLAN_SELECT = `
-  id, user_id, title, focus, scheduled_for, source, ai_model,
+  id, user_id, title, focus, scheduled_for, source, ai_model, shared_by,
   completed_at, created_at,
   plan_exercises (
     id, plan_id, exercise_id, position, sets, target_reps,
@@ -22,12 +23,15 @@ const toDomain = (row: PlanWithExercises): WorkoutPlan => ({
   focus: row.focus ?? "",
   completedAt: row.completed_at,
   scheduledFor: row.scheduled_for,
+  source: row.source,
+  sharedBy: row.shared_by,
   exercises: [...row.plan_exercises]
     // El orden lo manda `position`; PostgREST no garantiza el de la relación.
     .sort((a, b) => a.position - b.position)
     .map((item) => ({
       id: item.id,
       exerciseId: item.exercise_id,
+      slug: item.exercises.slug,
       name: item.exercises.name,
       muscleGroup: item.exercises.muscle_group,
       sets: item.sets,
@@ -43,6 +47,12 @@ const toDomain = (row: PlanWithExercises): WorkoutPlan => ({
  * es la pantalla, mirando `completedAt`: si sigue pendiente es el
  * entrenamiento vigente por muchos días que hayan pasado; si está terminado,
  * toca preparar el siguiente.
+ *
+ * Los compartidos quedan fuera. Son sesiones ocasionales que no pertenecen al
+ * ciclo, y si contaran como "el último plan" bastaría con aceptar el de un
+ * amigo para que el tuyo desapareciera de Inicio: al terminar el suyo, la
+ * pantalla diría "prepara el siguiente" y tu entrenamiento real quedaría
+ * escondido detrás, sin hacer y sin que se note.
  */
 export async function fetchLatestPlan(
   userId: string
@@ -51,8 +61,28 @@ export async function fetchLatestPlan(
     .from("workout_plans")
     .select(PLAN_SELECT)
     .eq("user_id", userId)
+    .neq("source", "shared")
     .order("created_at", { ascending: false })
     .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return toDomain(data as unknown as PlanWithExercises);
+}
+
+/**
+ * Un plan concreto, por id. Para revisar un día pasado desde "Esta semana",
+ * no solo el vigente.
+ */
+export async function fetchPlanById(
+  planId: string
+): Promise<WorkoutPlan | null> {
+  const { data, error } = await supabase
+    .from("workout_plans")
+    .select(PLAN_SELECT)
+    .eq("id", planId)
     .maybeSingle();
 
   if (error) throw error;
@@ -120,35 +150,15 @@ export async function discardPlan(
   if (error) throw error;
 }
 
-const WEEKDAYS = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"] as const;
-
-/**
- * La fecha de hoy en la zona del usuario, como AAAA-MM-DD.
- *
- * Se construye por componentes y no con `toISOString()`, que convierte a UTC:
- * a las 23:00 en España devolvería el día siguiente.
- */
-export const localDate = (date = new Date()) =>
-  [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-
 /** Pide un plan nuevo a la IA. La clave de Anthropic vive en la función. */
 export async function generatePlan(
   userId: string,
   focus?: string
 ): Promise<WorkoutPlan> {
+  // El ciclo decide la sesión, no la fecha: aquí ya no hace falta contarle
+  // nada al servidor sobre qué día es.
   const { data, error } = await supabase.functions.invoke("generate-workout", {
-    body: {
-      focus,
-      // La función corre en UTC, así que su idea de "hoy" se adelanta a la del
-      // usuario: de madrugada le daría la sesión de ayer. El día lo pone el
-      // móvil, que es el único que conoce su huso.
-      today: WEEKDAYS[new Date().getDay()],
-      today_date: localDate(),
-    },
+    body: { focus },
   });
 
   if (error) throw error;
@@ -165,6 +175,83 @@ export async function generatePlan(
   if (planError) throw planError;
 
   return toDomain(plan as unknown as PlanWithExercises);
+}
+
+/**
+ * Guarda como plan propio un entrenamiento que llegó por enlace.
+ *
+ * Sin `cycle_id` ni `cycle_position` a propósito: es una sesión ocasional, no
+ * la siguiente de la rotación. Así hacerlo no adelanta el ciclo de quien lo
+ * recibe ni descoloca lo que le tocaba.
+ */
+export async function importSharedWorkout(
+  userId: string,
+  shared: SharedWorkout
+): Promise<WorkoutPlan> {
+  // Los slugs vienen del catálogo del otro móvil. Es el mismo catálogo, pero
+  // una versión más nueva podría traer ejercicios que aquí no existen.
+  const { data: catalog, error: catalogError } = await supabase
+    .from("exercises")
+    .select("id, slug")
+    .in(
+      "slug",
+      shared.exercises.map((exercise) => exercise.slug)
+    );
+
+  if (catalogError) throw catalogError;
+
+  const idBySlug = new Map(
+    (catalog ?? []).map((row) => [row.slug as string, row.id as string])
+  );
+
+  const resolved = shared.exercises.filter((exercise) =>
+    idBySlug.has(exercise.slug)
+  );
+
+  if (resolved.length === 0) {
+    throw new Error(
+      "Ninguno de esos ejercicios está en tu catálogo. Puede que la app de quien te lo pasó esté más actualizada."
+    );
+  }
+
+  const { data: plan, error: planError } = await supabase
+    .from("workout_plans")
+    .insert({
+      user_id: userId,
+      title: shared.title,
+      focus: shared.focus || null,
+      source: "shared",
+      shared_by: shared.sharedBy || null,
+    })
+    .select("id")
+    .single();
+
+  if (planError) throw planError;
+
+  const { error: exercisesError } = await supabase
+    .from("plan_exercises")
+    .insert(
+      resolved.map((exercise, index) => ({
+        plan_id: plan.id,
+        exercise_id: idBySlug.get(exercise.slug)!,
+        position: index + 1,
+        sets: exercise.sets,
+        target_reps: exercise.targetReps,
+        target_weight_kg: exercise.targetWeightKg,
+        rest_seconds: exercise.restSeconds,
+      }))
+    );
+
+  if (exercisesError) {
+    // El plan sin ejercicios no le sirve a nadie y ensuciaría el historial.
+    await supabase.from("workout_plans").delete().eq("id", plan.id);
+    throw exercisesError;
+  }
+
+  const imported = await fetchPlanById(plan.id);
+  if (!imported) throw new Error("No se pudo leer el entrenamiento importado");
+
+  return imported;
 }
 
 /**
