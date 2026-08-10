@@ -44,11 +44,13 @@ const describe = (proposal: CoachProposal): string[] => {
     // Segunda red, además del saneado al leer. Lo que hay guardado es JSON que
     // escribió un modelo, y aquí un `.map` sobre undefined no da un hueco en
     // blanco: tumba la pantalla entera del chat.
-    const days = Array.isArray(proposal.days) ? proposal.days : [];
+    const sesiones = Array.isArray(proposal.cycle) ? proposal.cycle : [];
 
     return [
       proposal.name,
-      ...days.map((day) => `${day.day}: ${day.label} — ${day.focus}`),
+      ...sesiones.map(
+        (sesion) => `Sesión ${sesion.position}: ${sesion.label} — ${sesion.focus}`
+      ),
     ];
   }
 

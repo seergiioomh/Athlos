@@ -2,30 +2,61 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { profileKeys } from "@/features/onboarding/queries";
 import { deleteAccount, saveProfile } from "@/services/profile";
-import { fetchActiveSplit, generateSplit } from "@/services/split";
+import {
+  approveCycle,
+  fetchActiveCycle,
+  fetchDraftCycle,
+  generateCycle,
+} from "@/services/split";
 import type { ProfileRow } from "@/types/database";
 import { useUserId } from "@/features/auth/session";
 
 export const splitKeys = {
   active: (userId: string) => ["split", "active", userId] as const,
+  draft: (userId: string) => ["split", "draft", userId] as const,
 };
 
-export function useActiveSplit() {
+/** El ciclo que el usuario ya aprobó. */
+export function useActiveCycle() {
   const userId = useUserId()!;
 
   return useQuery({
     queryKey: splitKeys.active(userId),
-    queryFn: () => fetchActiveSplit(userId),
+    queryFn: () => fetchActiveCycle(userId),
   });
 }
 
-export function useGenerateSplit() {
+/** La propuesta pendiente de aprobar, si la hay. */
+export function useDraftCycle() {
+  const userId = useUserId()!;
+
+  return useQuery({
+    queryKey: splitKeys.draft(userId),
+    queryFn: () => fetchDraftCycle(userId),
+  });
+}
+
+/** Acepta el borrador. A partir de aquí manda él. */
+export function useApproveCycle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (cycleId: string) => approveCycle(cycleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["split"] });
+    },
+    retry: false,
+  });
+}
+
+/** Pide un ciclo nuevo. Se guarda como borrador: no manda hasta aprobarlo. */
+export function useGenerateCycle() {
   const userId = useUserId()!;
 
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => generateSplit(userId),
+    mutationFn: () => generateCycle(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: splitKeys.active(userId),

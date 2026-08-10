@@ -1,21 +1,15 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { HomeColors } from "@/features/home/home-theme";
-import { weekdayOptions } from "@/features/onboarding/schema";
-import type { WeeklySplitRow } from "@/types/database";
+import type { TrainingCycleRow } from "@/types/database";
 
 interface Props {
-  split: WeeklySplitRow | null;
+  split: TrainingCycleRow | null;
   generating: boolean;
   error?: string;
   onGenerate: () => void;
   onTalkToCoach: () => void;
 }
-
-const WEEKDAYS = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"];
-
-const shortOf = (day: string) =>
-  weekdayOptions.find((option) => option.value === day)?.label ?? day;
 
 export function WeeklySplitCard({
   split,
@@ -27,10 +21,10 @@ export function WeeklySplitCard({
   if (!split) {
     return (
       <View style={styles.card}>
-        <Text style={styles.name}>Sin reparto todavía</Text>
+        <Text style={styles.name}>Sin ciclo todavía</Text>
         <Text style={styles.rationale}>
-          El entrenador puede repartirte la semana según tus días, tu objetivo y
-          tu material.
+          El entrenador puede montarte el ciclo según tus días, tu objetivo y tu
+          material.
         </Text>
 
         {error && <Text style={styles.error}>{error}</Text>}
@@ -42,23 +36,21 @@ export function WeeklySplitCard({
           style={[styles.primary, generating && styles.primaryBusy]}
         >
           <Text style={styles.primaryText}>
-            {generating ? "Diseñando…" : "Diseñar mi semana"}
+            {generating ? "Diseñando…" : "Diseñar mi ciclo"}
           </Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const today = WEEKDAYS[new Date().getDay()];
-
   // Segunda red, además del saneado del servicio. Esta pantalla no tiene
   // salida propia: si revienta al montar, no queda ningún botón que pulsar
   // para arreglarlo.
-  const days = Array.isArray(split.days) ? split.days : [];
+  const sesiones = Array.isArray(split.cycle) ? split.cycle : [];
 
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>TU REPARTO SEMANAL</Text>
+      <Text style={styles.eyebrow}>TU CICLO DE ENTRENAMIENTO</Text>
       <Text style={styles.name}>{split.name}</Text>
 
       {split.rationale && (
@@ -66,23 +58,15 @@ export function WeeklySplitCard({
       )}
 
       <View style={styles.days}>
-        {days.map((day) => (
-          <View
-            key={day.day}
-            style={[styles.day, day.day === today && styles.dayToday]}
-          >
-            <Text
-              style={[
-                styles.dayName,
-                day.day === today && styles.dayTodayText,
-              ]}
-            >
-              {shortOf(day.day)}
-            </Text>
+        {sesiones.map((sesion) => (
+          <View key={sesion.position} style={styles.day}>
+            {/* El número es la identidad de la sesión: es lo que la ordena en
+                la rotación, no el día en que caiga. */}
+            <Text style={styles.dayName}>{sesion.position}</Text>
 
             <View style={styles.dayText}>
-              <Text style={styles.dayLabel}>{day.label}</Text>
-              <Text style={styles.dayFocus}>{day.focus}</Text>
+              <Text style={styles.dayLabel}>{sesion.label}</Text>
+              <Text style={styles.dayFocus}>{sesion.focus}</Text>
             </View>
           </View>
         ))}

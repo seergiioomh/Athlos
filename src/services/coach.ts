@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { replaceSplit } from "@/services/split";
-import type { WeeklySplitDay } from "@/types/database";
+import { replaceCycle, sanearCiclo } from "@/services/split";
+import type { TrainingCycleEntry } from "@/types/database";
 
 /**
  * Cambios que el coach puede proponer. El modelo nunca los ejecuta: los
@@ -33,7 +33,7 @@ export type CoachProposal =
       kind: "cambiar_reparto_semanal";
       name: string;
       rationale?: string;
-      days: WeeklySplitDay[];
+      cycle: TrainingCycleEntry[];
       motivo: string;
     };
 
@@ -113,17 +113,13 @@ function sanearPropuesta(value: unknown): CoachProposal | null {
   const proposal = value as Partial<CoachProposal> & { kind?: string };
 
   if (proposal.kind === "cambiar_reparto_semanal") {
-    const days = (proposal as { days?: unknown }).days;
+    // `sanearCiclo` ya descarta lo irreconocible y renumera: si no queda nada,
+    // la propuesta no se puede ni pintar ni aplicar.
+    const sesiones = sanearCiclo((proposal as { cycle?: unknown }).cycle);
 
-    const valido =
-      Array.isArray(days) &&
-      days.length > 0 &&
-      days.every(
-        (day) =>
-          day && typeof day === "object" && typeof (day as { day?: unknown }).day === "string"
-      );
-
-    return valido ? (proposal as CoachProposal) : null;
+    return sesiones.length > 0
+      ? ({ ...proposal, cycle: sesiones } as CoachProposal)
+      : null;
   }
 
   return proposal.kind ? (proposal as CoachProposal) : null;
@@ -205,16 +201,12 @@ export async function applyProposal(
   }
 
   if (proposal.kind === "cambiar_reparto_semanal") {
-    // `length` sobre undefined revienta igual que `.map`: aquí llega lo que
-    // guardó el modelo, no algo que hayamos construido nosotros.
-    if (!Array.isArray(proposal.days) || proposal.days.length === 0) {
-      throw new Error("El reparto propuesto no tiene días");
-    }
-
-    await replaceSplit(userId, {
+    // `replaceCycle` valida y aprueba en una sola operación: al pulsar Aplicar
+    // el usuario ya ha dado su visto bueno, así que no hay borrador que revisar.
+    await replaceCycle(userId, {
       name: proposal.name,
       rationale: proposal.rationale,
-      days: proposal.days,
+      cycle: proposal.cycle,
     });
 
     return;

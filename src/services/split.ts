@@ -1,97 +1,79 @@
 import { supabase } from "@/lib/supabase";
-import type { WeeklySplitDay, WeeklySplitRow } from "@/types/database";
-
-/** Orden canónico de la semana. Manda sobre el orden en que llegue el array. */
-const SEMANA = ["lun", "mar", "mie", "jue", "vie", "sab", "dom"] as const;
+import type { TrainingCycleEntry, TrainingCycleRow } from "@/types/database";
 
 /**
- * Normaliza el nombre de un día a su código de tres letras, o null si no hay
- * forma de reconocerlo.
- *
- * Acepta lo que escriba el modelo: "lun", "Lunes", "MIÉRCOLES". Quitar los
- * acentos y cortar a tres letras cubre los siete nombres en español, porque
- * ninguno colisiona en sus tres primeras letras.
+ * Normaliza el ciclo que viene de JSON externo. Los modelos no escriben en la
+ * base directamente, pero sus propuestas y los borradores siguen siendo datos
+ * no fiables al leerlos.
  */
-function normalizarDia(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-
-  const corto = value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    // Escrito con escapes y no con los caracteres combinantes literales: en el
-    // código fuente son invisibles y cualquier editor puede comérselos.
-    .replace(/[\u0300-\u036f]/g, "")
-    .slice(0, 3);
-
-  return (SEMANA as readonly string[]).includes(corto) ? corto : null;
-}
-
-/**
- * Deja los días del reparto en un estado que la pantalla siempre sabe pintar.
- *
- * `weekly_splits.days` es jsonb que escribió un modelo, así que se trata como
- * entrada externa: un `.map` sobre algo que no es un array no deja un hueco en
- * blanco, tumba la pantalla entera. Y la del reparto no tiene salida propia:
- * si revienta al montar, no hay botón que pulsar para arreglarlo.
- *
- * Se descarta lo irreconocible en vez de fallar, se quitan los días repetidos
- * —dos entradas del mismo día romperían las claves de React— y se ordena por
- * semana para que la tarjeta se lea siempre de lunes a domingo.
- */
-export function sanearDias(value: unknown): WeeklySplitDay[] {
+export function sanearCiclo(value: unknown): TrainingCycleEntry[] {
   if (!Array.isArray(value)) return [];
 
-  const vistos = new Set<string>();
+  const seen = new Set<number>();
 
   return value
     .flatMap((entry) => {
       if (!entry || typeof entry !== "object") return [];
 
       const raw = entry as Record<string, unknown>;
-      const day = normalizarDia(raw.day);
+      const position = Number(raw.position);
 
-      if (!day || vistos.has(day)) return [];
-      vistos.add(day);
+      if (!Number.isInteger(position) || position < 1 || seen.has(position)) {
+        return [];
+      }
+      seen.add(position);
 
       return [
         {
-          day,
+          position,
           label: typeof raw.label === "string" ? raw.label : "",
           focus: typeof raw.focus === "string" ? raw.focus : "",
-        } as WeeklySplitDay,
+        },
       ];
     })
-    .sort((a, b) => SEMANA.indexOf(a.day as never) - SEMANA.indexOf(b.day as never));
+    .sort((a, b) => a.position - b.position)
+    // Un ciclo siempre se lee seguido: Día 1, Día 2, Día 3… No dejamos que
+    // una posición que llegó mal convierta el próximo entrenamiento en Día 7.
+    .map((entry, index) => ({ ...entry, position: index + 1 }));
 }
 
-/** El reparto vigente, o null si el entrenador aún no ha diseñado ninguno. */
-export async function fetchActiveSplit(
-  userId: string
-): Promise<WeeklySplitRow | null> {
+function toCycle(data: TrainingCycleRow): TrainingCycleRow | null {
+  const cycle = sanearCiclo(data.cycle);
+  return cycle.length > 0 ? { ...data, cycle } : null;
+}
+
+async function fetchCycle(
+  userId: string,
+  status: "active" | "draft"
+): Promise<TrainingCycleRow | null> {
   const { data, error } = await supabase
     .from("weekly_splits")
     .select("*")
     .eq("user_id", userId)
-    .eq("active", true)
+    .eq("status", status)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return null;
-
-  const days = sanearDias(data.days);
-
-  // Un reparto sin un solo día reconocible no es un reparto: se devuelve null
-  // para que la pantalla ofrezca diseñar uno en vez de enseñar una tarjeta
-  // vacía que no explica nada.
-  if (days.length === 0) return null;
-
-  return { ...data, days };
+  return data ? toCycle(data as TrainingCycleRow) : null;
 }
 
-export async function generateSplit(userId: string): Promise<void> {
+/** El ciclo aceptado, o null si el usuario todavía no ha aprobado uno. */
+export function fetchActiveCycle(
+  userId: string
+): Promise<TrainingCycleRow | null> {
+  return fetchCycle(userId, "active");
+}
+
+/** La propuesta pendiente de aceptar, si la hay. */
+export function fetchDraftCycle(
+  userId: string
+): Promise<TrainingCycleRow | null> {
+  return fetchCycle(userId, "draft");
+}
+
+export async function generateCycle(_userId: string): Promise<void> {
   const { error } = await supabase.functions.invoke("generate-split", {
     body: {},
   });
@@ -100,45 +82,54 @@ export async function generateSplit(userId: string): Promise<void> {
 }
 
 /**
- * Sustituye el reparto vigente. El anterior no se borra: pasa a inactivo, así
- * queda el rastro de cómo ha ido evolucionando la estructura.
+ * Aprueba un borrador ya revisado por el usuario. La RPC archiva los anteriores
+ * y activa este en la misma transacción.
  */
-export async function replaceSplit(
-  userId: string,
-  split: { name: string; rationale?: string; days: WeeklySplitDay[] }
-): Promise<void> {
-  const dias = sanearDias(split.days);
-
-  // Se valida ANTES de desactivar el vigente. Al revés, un reparto nuevo mal
-  // formado dejaría al usuario sin ninguno: perdería el que tenía y no habría
-  // nada que lo sustituyera.
-  if (dias.length === 0) {
-    throw new Error("El reparto propuesto no tiene ningún día reconocible");
-  }
-
-  const nombre = split.name?.trim();
-
-  if (!nombre) {
-    throw new Error("El reparto propuesto no tiene nombre");
-  }
-
-  const { error: deactivateError } = await supabase
-    .from("weekly_splits")
-    .update({ active: false })
-    .eq("user_id", userId)
-    .eq("active", true);
-
-  if (deactivateError) throw deactivateError;
-
-  const { error } = await supabase.from("weekly_splits").insert({
-    user_id: userId,
-    name: nombre,
-    rationale: split.rationale?.trim() || null,
-    // Se sanea también al escribir, no solo al leer: si algo llega mal formado
-    // desde el coach, mejor que no entre en la base que arreglarlo en cada
-    // lectura durante el resto de la vida de la fila.
-    days: dias,
+export async function approveCycle(cycleId: string): Promise<TrainingCycleRow> {
+  const { data, error } = await supabase.rpc("approve_training_cycle", {
+    p_cycle_id: cycleId,
   });
 
   if (error) throw error;
+  const cycle = data ? toCycle(data as TrainingCycleRow) : null;
+  if (!cycle) throw new Error("El ciclo aprobado no es válido");
+
+  return cycle;
+}
+
+/**
+ * Aplica una propuesta del coach: al pulsar Aplicar el usuario ya la ha
+ * aprobado. Se guarda como borrador y se activa con la misma RPC que usa la
+ * pantalla de bienvenida, sin dejar nunca un hueco sin ciclo vigente.
+ */
+export async function replaceCycle(
+  userId: string,
+  cycle: { name: string; rationale?: string; cycle: TrainingCycleEntry[] }
+): Promise<void> {
+  const sessions = sanearCiclo(cycle.cycle);
+
+  if (sessions.length === 0) {
+    throw new Error("El ciclo propuesto no tiene ninguna sesión reconocible");
+  }
+
+  const name = cycle.name?.trim();
+  if (!name) throw new Error("El ciclo propuesto no tiene nombre");
+
+  const { data, error } = await supabase
+    .from("weekly_splits")
+    .insert({
+      user_id: userId,
+      name,
+      rationale: cycle.rationale?.trim() || null,
+      cycle: sessions,
+      status: "draft",
+      active: false,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error("No se pudo guardar el ciclo propuesto");
+
+  await approveCycle(data.id);
 }

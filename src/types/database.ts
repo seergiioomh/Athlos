@@ -43,19 +43,21 @@ export type FocusArea =
 export type DailyActivity = "sedentaria" | "ligera" | "activa" | "muy-activa";
 export type Cardio = "ninguno" | "poco" | "moderado" | "mucho";
 
-export interface WeeklySplitDay {
-  day: Weekday;
+export interface TrainingCycleEntry {
+  position: number;
   label: string;
   focus: string;
 }
 
-export interface WeeklySplitRow {
+export interface TrainingCycleRow {
   id: string;
   user_id: string;
   name: string;
   rationale: string | null;
-  days: WeeklySplitDay[];
+  cycle: TrainingCycleEntry[];
   active: boolean;
+  status: "draft" | "active" | "archived";
+  approved_at: string | null;
   created_at: string;
 }
 
@@ -103,8 +105,16 @@ export interface WorkoutPlanRow {
   title: string;
   focus: string | null;
   scheduled_for: string;
-  source: "ai" | "manual";
+  /**
+   * De dónde salió: 'ai' lo diseñó el coach, 'manual' se importó de notas en
+   * papel, 'shared' llegó por enlace de otro usuario.
+   */
+  source: "ai" | "manual" | "shared";
   ai_model: string | null;
+  /** Quién lo compartió, solo para enseñarlo. Null salvo en los 'shared'. */
+  shared_by: string | null;
+  cycle_id: string | null;
+  cycle_position: number | null;
   completed_at: string | null;
   created_at: string;
 }

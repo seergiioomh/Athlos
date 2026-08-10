@@ -13,13 +13,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HomeColors } from "@/features/home/home-theme";
 import { errorMessage } from "@/utils/errors";
 import { WeeklySplitCard } from "./components/WeeklySplitCard";
-import { useActiveSplit, useGenerateSplit } from "./queries";
+import { useActiveCycle, useGenerateCycle } from "./queries";
 
 export function WeeklyPlanScreen() {
   const router = useRouter();
 
-  const { data: split } = useActiveSplit();
-  const makeSplit = useGenerateSplit();
+  const { data: split } = useActiveCycle();
+  const makeSplit = useGenerateCycle();
 
   const back = () => {
     if (router.canGoBack()) {

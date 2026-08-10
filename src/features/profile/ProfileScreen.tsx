@@ -44,7 +44,7 @@ import {
   type EditSection,
 } from "./components/EditProfileSheet";
 import {
-  useActiveSplit,
+  useActiveCycle,
   useDeleteAccount,
   useUpdateProfile,
 } from "./queries";
@@ -106,7 +106,7 @@ export function ProfileScreen() {
   const { data: profile, isPending } = useProfile();
   const { data: summary } = useProgressSummary();
   const { data: streak, error: streakError } = useStreak();
-  const { data: split } = useActiveSplit();
+  const { data: split } = useActiveCycle();
   const { email } = useSession();
   const update = useUpdateProfile();
   const remove = useDeleteAccount();

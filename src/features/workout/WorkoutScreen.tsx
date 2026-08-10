@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -12,39 +12,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HomeColors } from "@/features/home/home-theme";
 import { WeeklySplitCard } from "@/features/profile/components/WeeklySplitCard";
-import { useActiveSplit, useGenerateSplit } from "@/features/profile/queries";
-import { localDate } from "@/services/workout";
+import {
+  useActiveCycle,
+  useApproveCycle,
+  useDraftCycle,
+  useGenerateCycle,
+} from "@/features/profile/queries";
 import { errorMessage } from "@/utils/errors";
 import { ActiveWorkout } from "./ActiveWorkout";
-import {
-  useGeneratePlan,
-  useLatestPlan,
-  usePlanStarted,
-  useRegeneratePlan,
-} from "./queries";
-
-const WEEKDAYS = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"] as const;
-
-const NOMBRES = [
-  "domingo",
-  "lunes",
-  "martes",
-  "miércoles",
-  "jueves",
-  "viernes",
-  "sábado",
-];
-
-/**
- * El día de la semana de una fecha AAAA-MM-DD, escrito.
- *
- * Se construye por componentes: `new Date("2026-08-10")` interpreta la cadena
- * como UTC y, al leerla en hora local, puede caer en el día anterior.
- */
-const diaDe = (iso: string) => {
-  const [year, month, day] = iso.split("-").map(Number);
-  return NOMBRES[new Date(year, month - 1, day).getDay()] ?? "otro día";
-};
+import { useGeneratePlan, useLatestPlan } from "./queries";
 
 export function WorkoutScreen() {
   const router = useRouter();
@@ -52,54 +28,24 @@ export function WorkoutScreen() {
   const { data: plan, isPending, error, refetch } = useLatestPlan();
   const generate = useGeneratePlan();
 
-  const { data: split, isPending: splitPending } = useActiveSplit();
-  const makeSplit = useGenerateSplit();
-
-  /**
-   * Si el usuario ha dado el visto bueno a su reparto.
-   *
-   * Quien ya tenía uno al entrar no tiene nada que aprobar: se da por bueno.
-   * Quien no lo tiene pasa antes por diseñarlo y confirmarlo, porque el reparto
-   * decide el foco de todas sus sesiones y empezar a entrenar sin haberlo
-   * mirado es empezar por el tejado.
-   */
-  const [aprobado, setAprobado] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (splitPending || aprobado !== null) return;
-    setAprobado(Boolean(split));
-  }, [splitPending, split, aprobado]);
+  const { data: cycle, isPending: cyclePending } = useActiveCycle();
+  const { data: draft } = useDraftCycle();
+  const makeCycle = useGenerateCycle();
+  const approve = useApproveCycle();
 
   // Mientras no esté hecho, este es el entrenamiento vigente por muchos días
-  // que hayan pasado.
+  // que hayan pasado. Con el ciclo eso ya no desfasa nada: la sesión pendiente
+  // sigue siendo la que toca, se haga hoy o el jueves.
   const pending = plan && !plan.completedAt ? plan : null;
 
-  /** Hay que pasar por la semana antes de tocar el entrenamiento. */
-  const faltaReparto = !pending && aprobado === false;
-
-  const { data: empezado } = usePlanStarted(pending?.id);
-  const regenerate = useRegeneratePlan();
-
-  /** El usuario ha dicho que quiere hacer igualmente el plan de otro día. */
-  const [insistir, setInsistir] = useState(false);
-
-  const hoy = WEEKDAYS[new Date().getDay()];
-  const slotDeHoy = split?.days.find((day) => day.day === hoy);
-
   /**
-   * Un plan que se quedó pendiente de otro día.
+   * Sin ciclo aprobado no se entrena.
    *
-   * Sin esto, saltarse el lunes dejaba el Push del lunes como entrenamiento
-   * vigente el martes, el miércoles y para siempre: el desfase se acumulaba y
-   * el reparto pasaba a decir una cosa y la app otra.
-   *
-   * Solo se ofrece si no tiene ninguna serie: uno empezado es historial.
+   * El estado vive en la base —`status` y `approved_at`— y no en React: así
+   * cerrar la app a mitad no pierde la propuesta, y el coach y esta pantalla
+   * miran lo mismo.
    */
-  const planDeOtroDia =
-    pending && pending.scheduledFor !== localDate() ? pending : null;
-
-  const ofrecerCambio =
-    Boolean(planDeOtroDia) && empezado === false && !insistir;
+  const faltaCiclo = !pending && !cyclePending && !cycle;
 
   // Una sola tentativa automática por visita: si la IA falla, insistir sola
   // sería quemar llamadas sin que el usuario se entere.
@@ -110,13 +56,13 @@ export function WorkoutScreen() {
     // siguiente lo pide el usuario: es él quien sabe cuándo vuelve.
     if (isPending || error || plan || attempted.current) return;
 
-    // Y nunca antes de tener un reparto aprobado: la sesión se diseña a partir
+    // Y nunca antes de tener un ciclo aprobado: la sesión se diseña a partir
     // de él, así que generarla antes sería tirarla a la basura.
-    if (aprobado !== true) return;
+    if (!cycle) return;
 
     attempted.current = true;
     generate.mutate(undefined);
-  }, [isPending, error, plan, generate, aprobado]);
+  }, [isPending, error, plan, generate, cycle]);
 
   // Entrenar es una pestaña raíz: si se llegó tocando la tab no hay
   // historial que deshacer, así que caemos a Inicio.
@@ -146,92 +92,46 @@ export function WorkoutScreen() {
           <Text style={styles.body}>{message(error)}</Text>
           <Action label="Reintentar" onPress={() => refetch()} />
         </Centered>
-      ) : ofrecerCambio && planDeOtroDia ? (
-        <ScrollView contentContainerStyle={styles.choice}>
-          <Text style={styles.title}>¿Qué entrenas hoy?</Text>
-          <Text style={styles.body}>
-            Te quedó uno preparado del {diaDe(planDeOtroDia.scheduledFor)} sin
-            hacer.
-          </Text>
-
-          {/* Dos opciones con el mismo peso, no una acción y una escapatoria:
-              cada tarjeta dice qué entrenamiento sale si la eliges. */}
-          <TouchableOpacity
-            activeOpacity={0.85}
-            disabled={regenerate.isPending}
-            onPress={() =>
-              regenerate.mutate(planDeOtroDia.id, {
-                onError: () => setInsistir(true),
-              })
-            }
-            style={[styles.option, styles.optionToday]}
-          >
-            <Text style={styles.optionEyebrow}>HOY</Text>
-            <Text style={styles.optionTitle}>
-              {slotDeHoy ? slotDeHoy.label : "Sesión suelta"}
-            </Text>
-            <Text style={styles.optionHint}>
-              {regenerate.isPending
-                ? "Preparándolo…"
-                : slotDeHoy
-                  ? slotDeHoy.focus
-                  : "Hoy no toca entrenar según tu reparto"}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.85}
-            disabled={regenerate.isPending}
-            onPress={() => setInsistir(true)}
-            style={styles.option}
-          >
-            <Text style={styles.optionEyebrowMuted}>
-              DEL {diaDe(planDeOtroDia.scheduledFor).toUpperCase()}
-            </Text>
-            <Text style={styles.optionTitle}>{planDeOtroDia.title}</Text>
-            <Text style={styles.optionHint}>
-              {planDeOtroDia.exercises.length} ejercicios ya preparados
-            </Text>
-          </TouchableOpacity>
-
-          {regenerate.error && (
-            <Text style={styles.body}>{message(regenerate.error)}</Text>
-          )}
-        </ScrollView>
-      ) : faltaReparto ? (
+      ) : faltaCiclo ? (
         <ScrollView contentContainerStyle={styles.splitStep}>
-          <Text style={styles.title}>Primero, tu semana</Text>
+          <Text style={styles.title}>Primero, tu ciclo</Text>
           <Text style={styles.body}>
-            El reparto decide qué te toca cada día, y cada entrenamiento sale
-            de él. Míralo antes de empezar: si no te encaja, lo cambiamos.
+            Son tus sesiones en orden: la 1, la 2, la 3… y vuelta a empezar.
+            Cada entrenamiento sale de aquí, y da igual el día que entrenes.
           </Text>
 
           <WeeklySplitCard
-            split={split ?? null}
-            generating={makeSplit.isPending}
-            error={makeSplit.error ? message(makeSplit.error) : undefined}
-            onGenerate={() => makeSplit.mutate()}
+            split={draft ?? null}
+            generating={makeCycle.isPending}
+            error={makeCycle.error ? message(makeCycle.error) : undefined}
+            onGenerate={() => makeCycle.mutate()}
             onTalkToCoach={() => router.push("/(tabs)/coach")}
           />
 
-          {split && (
+          {draft && (
             <>
               <Action
-                label="Me encaja, prepara mi entrenamiento"
-                onPress={() => setAprobado(true)}
+                label={
+                  approve.isPending ? "Guardando…" : "Me encaja, empezar"
+                }
+                onPress={() => approve.mutate(draft.id)}
               />
 
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => makeSplit.mutate()}
-                disabled={makeSplit.isPending}
+                onPress={() => makeCycle.mutate()}
+                disabled={makeCycle.isPending || approve.isPending}
                 style={styles.secondary}
               >
                 <Text style={styles.secondaryText}>
-                  {makeSplit.isPending ? "Diseñando…" : "Prefiero otro reparto"}
+                  {makeCycle.isPending ? "Diseñando…" : "Prefiero otro ciclo"}
                 </Text>
               </TouchableOpacity>
             </>
+          )}
+
+          {approve.error && (
+            <Text style={styles.body}>{message(approve.error)}</Text>
           )}
         </ScrollView>
       ) : pending && pending.exercises.length > 0 ? (
@@ -329,55 +229,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: HomeColors.text,
     textAlign: "center",
-  },
-
-  choice: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 120,
-    gap: 12,
-  },
-
-  option: {
-    padding: 18,
-    borderRadius: 20,
-    backgroundColor: HomeColors.surface,
-    borderWidth: 1,
-    borderColor: HomeColors.border,
-    gap: 4,
-  },
-
-  // La de hoy va marcada, pero las dos se pulsan igual: es una elección, no
-  // una recomendación con letra pequeña.
-  optionToday: {
-    borderColor: HomeColors.primary,
-    backgroundColor: HomeColors.primarySoft,
-  },
-
-  optionEyebrow: {
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    color: HomeColors.primary,
-  },
-
-  optionEyebrowMuted: {
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    color: HomeColors.textTertiary,
-  },
-
-  optionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: HomeColors.text,
-  },
-
-  optionHint: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: HomeColors.textSecondary,
   },
 
   secondary: {
