@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -9,11 +10,17 @@ import { useProfile } from "@/features/onboarding/queries";
 import { useStreak } from "@/features/progress/queries";
 import { useLatestPlan } from "@/features/workout/queries";
 import { CoachInsightCard } from "./components/CoachInsightCard";
+import { PastWorkoutSheet } from "./components/PastWorkoutSheet";
 import { TodayWorkoutCard } from "./components/TodayWorkoutCard";
 import { WorkoutHistory } from "./components/WorkoutHistory";
 import { HomeColors } from "./home-theme";
 import { levelFromStats } from "./level";
-import { useRecentSessions, useTrainingStats, useWeightHistory } from "./queries";
+import {
+  useDayPlan,
+  useRecentSessions,
+  useTrainingStats,
+  useWeightHistory,
+} from "./queries";
 
 const greetingFor = (hour: number) =>
   hour < 6 ? "Buenas noches" : hour < 13 ? "Buenos días" : hour < 21 ? "Buenas tardes" : "Buenas noches";
@@ -35,6 +42,16 @@ export function HomeScreen() {
   const { data: sessions } = useRecentSessions();
   const { data: stats } = useTrainingStats();
   const { data: streak } = useStreak();
+
+  /** Día tocado en "Esta semana", si lo hay. */
+  const [viewingDay, setViewingDay] = useState<{
+    planId: string;
+    date: Date;
+  } | null>(null);
+
+  const { data: viewingPlan, isPending: viewingPlanPending } = useDayPlan(
+    viewingDay?.planId ?? null
+  );
 
   const name = profile?.display_name ?? "";
   const progress = levelFromStats(
@@ -86,6 +103,7 @@ export function HomeScreen() {
       <WorkoutHistory
         sessions={sessions ?? []}
         onPress={() => router.push("/(tabs)/progress")}
+        onSelectDay={(planId, date) => setViewingDay({ planId, date })}
       />
 
       <View style={styles.metricsRow}>
@@ -113,6 +131,14 @@ export function HomeScreen() {
           onPress={() => router.push("/(tabs)/coach")}
         />
       </ScrollView>
+
+      <PastWorkoutSheet
+        plan={viewingPlan ?? null}
+        date={viewingDay?.date ?? null}
+        loading={viewingPlanPending}
+        visible={Boolean(viewingDay)}
+        onClose={() => setViewingDay(null)}
+      />
     </SafeAreaView>
   );
 }

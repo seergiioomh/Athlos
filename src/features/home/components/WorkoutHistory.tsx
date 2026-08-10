@@ -6,11 +6,17 @@ import { HomeColors } from "../home-theme";
 
 type Props = {
   onPress: () => void;
+  /**
+   * Al tocar un día con entrenamiento guardado. La fecha es la del día
+   * tocado, no la del plan: una sesión de madrugada podría quedar registrada
+   * con la fecha del día anterior, y lo que importa es qué día se tocó.
+   */
+  onSelectDay: (planId: string, date: Date) => void;
   sessions: WeekSession[];
 };
 
-const DAYS_BACK = 4;
-const DAYS_FORWARD = 4;
+const DAYS_BACK = 7;
+const DAYS_FORWARD = 7;
 const TODAY_INDEX = DAYS_BACK;
 
 // Ancho de tarjeta más separación. Hace falta explícito para que la lista
@@ -34,22 +40,30 @@ const buildDays = (sessions: WeekSession[]) => {
     const date = new Date(today);
     date.setDate(today.getDate() + (index - DAYS_BACK));
 
-    const trained = sessions.some(
-      (session) =>
-        session.finishedAt && isSameDay(new Date(session.startedAt), date)
-    );
+    // Con dos sesiones el mismo día, la última es la que se enseña: es la
+    // que queda más fresca en la cabeza.
+    const session = [...sessions]
+      .reverse()
+      .find(
+        (item) =>
+          item.finishedAt && isSameDay(new Date(item.startedAt), date)
+      );
 
     return {
       key: date.toISOString().slice(0, 10),
       day: weekdays[date.getDay()],
       date: date.getDate(),
-      trained,
+      fullDate: date,
+      trained: Boolean(session),
+      // Puede haber sesión sin plan: el plan se desengancha (no se borra) si
+      // se regenera. Ese día se ve entrenado, pero no hay nada que abrir.
+      planId: session?.planId ?? null,
       isToday: index === TODAY_INDEX,
     };
   });
 };
 
-export function WorkoutHistory({ onPress, sessions }: Props) {
+export function WorkoutHistory({ onPress, onSelectDay, sessions }: Props) {
   const days = buildDays(sessions);
   const list = useRef<FlatList>(null);
   const centered = useRef(false);
@@ -95,7 +109,13 @@ export function WorkoutHistory({ onPress, sessions }: Props) {
         offset: ITEM_SIZE * index,
         index,
       })}
-      renderItem={({ item }) => <TouchableOpacity activeOpacity={0.8} style={[styles.card, item.isToday && styles.selectedCard]}>
+      renderItem={({ item }) => <TouchableOpacity
+        activeOpacity={item.planId ? 0.8 : 1}
+        onPress={() =>
+          item.planId && onSelectDay(item.planId, item.fullDate)
+        }
+        style={[styles.card, item.isToday && styles.selectedCard]}
+      >
         <Text style={[styles.day, item.isToday && styles.selectedText]}>{item.day}</Text><Text style={[styles.date, item.isToday && styles.selectedText]}>{item.date}</Text>
         <View style={[
           styles.dot,

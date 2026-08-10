@@ -5,12 +5,14 @@ import {
   fetchStats,
   fetchWeightHistory,
 } from "@/services/home";
+import { fetchPlanById } from "@/services/workout";
 import { useUserId } from "@/features/auth/session";
 
 export const homeKeys = {
   weight: (userId: string) => ["home", "weight", userId] as const,
   sessions: (userId: string) => ["home", "sessions", userId] as const,
   stats: (userId: string) => ["home", "stats", userId] as const,
+  dayPlan: (planId: string) => ["home", "day-plan", planId] as const,
 };
 
 export function useWeightHistory() {
@@ -28,6 +30,15 @@ export function useRecentSessions() {
   return useQuery({
     queryKey: homeKeys.sessions(userId),
     queryFn: () => fetchRecentSessions(userId),
+  });
+}
+
+/** El plan de un día concreto de "Esta semana", al tocarlo. */
+export function useDayPlan(planId: string | null) {
+  return useQuery({
+    queryKey: homeKeys.dayPlan(planId ?? "ninguno"),
+    queryFn: () => fetchPlanById(planId!),
+    enabled: Boolean(planId),
   });
 }
 

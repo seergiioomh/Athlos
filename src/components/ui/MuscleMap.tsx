@@ -80,7 +80,7 @@ export function MuscleMap({ exercises, size = 142 }: Props) {
       >
         <Body
           data={parts}
-          side={bestSideFor(parts)}
+          side={bestSideFor(exercises)}
           gender="male"
           scale={scale}
           colors={INTENSITY_COLORS}

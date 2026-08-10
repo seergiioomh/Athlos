@@ -48,18 +48,31 @@ export async function recordWeight(
 export interface WeekSession {
   startedAt: string;
   finishedAt: string | null;
+  /**
+   * Null si el plan de esa sesión se borró (regenerarlo lo desengancha, no lo
+   * borra a él). Sin plan no hay nada que enseñar al tocar el día.
+   */
+  planId: string | null;
 }
 
-/** Sesiones de los últimos 7 días, para la tira de "Esta semana". */
+/**
+ * Sesiones recientes, para la tira de "Esta semana" en Inicio.
+ *
+ * La ventana es un poco más ancha que los días que la tira enseña hacia
+ * atrás (`WorkoutHistory.DAYS_BACK`, hoy 7): así un ajuste pequeño de la tira
+ * no deja el borde sin datos en silencio.
+ */
+const HISTORY_MARGIN_DAYS = 10;
+
 export async function fetchRecentSessions(
   userId: string
 ): Promise<WeekSession[]> {
   const since = new Date();
-  since.setDate(since.getDate() - 7);
+  since.setDate(since.getDate() - HISTORY_MARGIN_DAYS);
 
   const { data, error } = await supabase
     .from("workout_sessions")
-    .select("started_at, finished_at")
+    .select("started_at, finished_at, plan_id")
     .eq("user_id", userId)
     .gte("started_at", since.toISOString())
     .order("started_at", { ascending: true });
@@ -69,6 +82,7 @@ export async function fetchRecentSessions(
   return (data ?? []).map((row) => ({
     startedAt: row.started_at,
     finishedAt: row.finished_at,
+    planId: row.plan_id,
   }));
 }
 

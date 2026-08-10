@@ -62,13 +62,31 @@ export function bodyPartsFor(
 /**
  * Qué cara enseñar. Un día de tirón ilumina espalda y glúteo, así que la
  * vista frontal saldría casi vacía: elegimos la que tiene más que contar.
+ *
+ * Pesa por EJERCICIO, no por zona distinta. Con zonas distintas, un día con
+ * dos ejercicios de espalda (una sola zona: `upper-back`) más uno de bíceps y
+ * uno de deltoides posterior (dos zonas de delante) contaba 1 zona detrás
+ * contra 2 delante y elegía la vista frontal — donde `upper-back` no existe,
+ * así que el trabajo de espalda, que era el grueso real del día, desaparecía
+ * entero. Contando ejercicios en vez de zonas, esos mismos cuatro salen 3
+ * detrás (los dos de espalda más el de deltoides posterior, que ilumina las
+ * dos caras) contra 1 delante, y gana la vista que de verdad tiene más que
+ * enseñar.
  */
-export function bestSideFor(parts: ExtendedBodyPart[]): "front" | "back" {
-  const back = parts.filter(
-    (part) => part.slug && BACK_ONLY.includes(part.slug)
-  ).length;
+export function bestSideFor(
+  exercises: Pick<SuggestedExercise, "muscleGroup">[]
+): "front" | "back" {
+  let back = 0;
+  let front = 0;
 
-  return back > parts.length - back ? "back" : "front";
+  for (const exercise of exercises) {
+    for (const slug of MUSCLE_SLUGS[exercise.muscleGroup] ?? []) {
+      if (BACK_ONLY.includes(slug)) back++;
+      else front++;
+    }
+  }
+
+  return back > front ? "back" : "front";
 }
 
 const LEG_SLUGS: Slug[] = [
