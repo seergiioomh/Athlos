@@ -5,6 +5,7 @@ import { useProfile } from "@/features/onboarding/queries";
 import { recordWeight } from "@/services/home";
 import {
   fetchExerciseProgress,
+  fetchPeriodSummary,
   fetchProgressSummary,
   fetchStreak,
   fetchWeightRange,
@@ -18,6 +19,8 @@ export const progressKeys = {
     ["progress", "weight", userId, days] as const,
   streak: (userId: string, maxGap: number) =>
     ["progress", "streak", userId, maxGap] as const,
+  period: (userId: string, days: number) =>
+    ["progress", "period", userId, days] as const,
 };
 
 /**
@@ -56,6 +59,15 @@ export function useStreak() {
   return useQuery({
     queryKey: progressKeys.streak(userId, maxGap),
     queryFn: () => fetchStreak(userId, maxGap),
+  });
+}
+
+export function usePeriodSummary(days: number) {
+  const userId = useUserId()!;
+
+  return useQuery({
+    queryKey: progressKeys.period(userId, days),
+    queryFn: () => fetchPeriodSummary(userId, days),
   });
 }
 

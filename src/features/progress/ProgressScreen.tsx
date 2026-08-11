@@ -14,15 +14,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { HomeColors } from "@/features/home/home-theme";
 import { levelFromStats } from "@/features/home/level";
+import { useProfile } from "@/features/onboarding/queries";
 import { errorMessage } from "@/utils/errors";
+import { ActivityStats } from "./components/ActivityStats";
+import { ExerciseMarks } from "./components/ExerciseMarks";
 import { WeightChart } from "./components/WeightChart";
 import { WeightLogModal } from "./components/WeightLogModal";
 import {
   useExerciseProgress,
+  usePeriodSummary,
   useProgressSummary,
   useRecordWeight,
   useWeightRange,
 } from "./queries";
+import { goodWeightDirection } from "./weight-goal";
 
 const ranges = [
   { value: 7, label: "7 días" },
@@ -37,10 +42,19 @@ const kg = (value: number) =>
     maximumFractionDigits: 1,
   });
 
-const compact = (value: number) =>
-  value >= 1000
-    ? `${(value / 1000).toLocaleString("es-ES", { maximumFractionDigits: 1 })} t`
-    : `${Math.round(value)} kg`;
+// Verde si el cambio va hacia el objetivo, ámbar si se aleja, gris si el
+// objetivo no dice nada sobre la báscula.
+const DELTA_TONE_STYLES = {
+  good: { backgroundColor: "rgba(48,209,88,0.14)" },
+  bad: { backgroundColor: "rgba(255,159,10,0.14)" },
+  neutral: { backgroundColor: HomeColors.surfaceElevated },
+};
+
+const DELTA_TEXT_TONE_STYLES = {
+  good: { color: HomeColors.success },
+  bad: { color: HomeColors.warning },
+  neutral: { color: HomeColors.textSecondary },
+};
 
 export function ProgressScreen() {
   const [days, setDays] = useState(30);
@@ -48,7 +62,9 @@ export function ProgressScreen() {
 
   const { data: weight, isPending: weightPending } = useWeightRange(days);
   const { data: summary } = useProgressSummary();
+  const { data: periodSummary } = usePeriodSummary(days);
   const { data: exercises } = useExerciseProgress();
+  const { data: profile } = useProfile();
   const record = useRecordWeight();
 
   const level = levelFromStats({
@@ -60,6 +76,21 @@ export function ProgressScreen() {
   const current = history[history.length - 1]?.weightKg;
   const delta =
     history.length > 1 ? current - history[0].weightKg : 0;
+
+  // Verde si el peso se mueve hacia el objetivo, ámbar si se aleja. Sin
+  // objetivo claro (fuerza, rendimiento...) se queda neutro: no hay forma
+  // honesta de decir si subir o bajar es lo bueno.
+  const goodDirection = goodWeightDirection(
+    profile?.goal ?? null,
+    profile?.target_weight_kg ?? null,
+    current
+  );
+  const deltaTone: "good" | "bad" | "neutral" =
+    delta === 0 || goodDirection === "neutral"
+      ? "neutral"
+      : (delta > 0) === (goodDirection === "up")
+        ? "good"
+        : "bad";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -73,7 +104,7 @@ export function ProgressScreen() {
         {/* El selector va fuera de la tarjeta: manda sobre la gráfica, y
             dentro competía con el peso por la misma línea de lectura. */}
         <View style={styles.ranges}>
-          <SegmentedControl options={ranges} value={days} onChange={setDays} />
+          <SegmentedControl options={ranges} value={days} onChange={setDays} accent={HomeColors.pink} />
         </View>
 
         <View style={styles.card}>
@@ -83,7 +114,7 @@ export function ProgressScreen() {
                 <HugeiconsIcon
                   icon={AnalyticsUpIcon}
                   size={20}
-                  color={HomeColors.primary}
+                  color={HomeColors.pink}
                   strokeWidth={2}
                 />
               </View>
@@ -105,17 +136,9 @@ export function ProgressScreen() {
               )}
 
               {history.length > 1 && (
-                <View
-                  style={[
-                    styles.delta,
-                    delta <= 0 ? styles.deltaDown : styles.deltaUp,
-                  ]}
-                >
+                <View style={[styles.delta, DELTA_TONE_STYLES[deltaTone]]}>
                   <Text
-                    style={[
-                      styles.deltaText,
-                      delta <= 0 ? styles.deltaTextDown : styles.deltaTextUp,
-                    ]}
+                    style={[styles.deltaText, DELTA_TEXT_TONE_STYLES[deltaTone]]}
                   >
                     {delta === 0
                       ? "sin cambios"
@@ -128,7 +151,7 @@ export function ProgressScreen() {
 
           {weightPending ? (
             <View style={styles.chartPlaceholder}>
-              <ActivityIndicator color={HomeColors.primary} />
+              <ActivityIndicator color={HomeColors.pink} />
             </View>
           ) : history.length === 0 ? (
             <View style={styles.chartPlaceholder}>
@@ -150,57 +173,12 @@ export function ProgressScreen() {
         </View>
 
         {/* ------------------------------------------------------- resumen */}
-        <Text style={styles.section}>Tu actividad</Text>
-
-        <View style={styles.grid}>
-          <Stat
-            value={String(summary?.finishedSessions ?? 0)}
-            label="Entrenamientos"
-          />
-          <Stat value={String(summary?.totalSets ?? 0)} label="Series" />
-          <Stat
-            value={compact(summary?.totalVolumeKg ?? 0)}
-            label="Volumen total"
-            hint="peso × repeticiones"
-          />
-          <Stat value={`Nivel ${level.level}`} label={`${level.percent}% al siguiente`} />
-        </View>
+        <ActivityStats days={days} summary={periodSummary} level={level} />
 
         {/* ------------------------------------------------------- fuerza */}
         <Text style={styles.section}>Tus marcas</Text>
 
-        {exercises && exercises.length > 0 ? (
-          <View style={styles.marks}>
-            {exercises.map((exercise) => (
-              <View key={exercise.exerciseId} style={styles.mark}>
-                <View style={styles.markText}>
-                  <Text style={styles.markName}>{exercise.name}</Text>
-                  <Text style={styles.markMuscle}>
-                    {exercise.muscleGroup} · {exercise.totalSets} series
-                  </Text>
-                </View>
-
-                <View style={styles.markBest}>
-                  <Text style={styles.markWeight}>
-                    {exercise.bestWeightKg === 0
-                      ? "Corporal"
-                      : `${kg(exercise.bestWeightKg)} kg`}
-                  </Text>
-                  <Text style={styles.markReps}>
-                    × {exercise.bestReps} reps
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>
-              Cuando registres series aparecerán aquí tus mejores marcas de
-              cada ejercicio.
-            </Text>
-          </View>
-        )}
+        <ExerciseMarks exercises={exercises ?? []} />
       </ScrollView>
 
       <WeightLogModal
@@ -216,26 +194,6 @@ export function ProgressScreen() {
         }
       />
     </SafeAreaView>
-  );
-}
-
-function Stat({
-  value,
-  label,
-  hint,
-}: {
-  value: string;
-  label: string;
-  hint?: string;
-}) {
-  return (
-    <View style={styles.stat}>
-      <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
-      <Text style={styles.statLabel}>{label}</Text>
-      {hint && <Text style={styles.statHint}>{hint}</Text>}
-    </View>
   );
 }
 
@@ -281,7 +239,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: HomeColors.primarySoft,
+    backgroundColor: HomeColors.pinkSoft,
   },
 
   headerTitles: { flexShrink: 1 },
@@ -318,12 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
 
-  deltaDown: { backgroundColor: "rgba(48,209,88,0.14)" },
-  deltaUp: { backgroundColor: "rgba(255,159,10,0.14)" },
-
   deltaText: { fontSize: 12, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  deltaTextDown: { color: HomeColors.success },
-  deltaTextUp: { color: HomeColors.warning },
 
   ranges: { marginTop: 24 },
 
@@ -339,10 +292,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: HomeColors.primarySoft,
+    backgroundColor: HomeColors.pinkSoft,
   },
 
-  logButtonText: { fontSize: 15, fontWeight: "700", color: HomeColors.primary },
+  logButtonText: { fontSize: 15, fontWeight: "700", color: HomeColors.pink },
 
   section: {
     marginTop: 30,
@@ -350,60 +303,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: HomeColors.text,
-  },
-
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-
-  stat: {
-    flexBasis: "47.8%",
-    flexGrow: 1,
-    padding: 16,
-    borderRadius: 20,
-    backgroundColor: HomeColors.surface,
-  },
-
-  statValue: {
-    fontSize: 24,
-    fontWeight: "800",
-    letterSpacing: -0.8,
-    color: HomeColors.text,
-    fontVariant: ["tabular-nums"],
-  },
-
-  statLabel: { marginTop: 4, fontSize: 13, color: HomeColors.textSecondary },
-  statHint: { marginTop: 2, fontSize: 10, color: HomeColors.textTertiary },
-
-  marks: { gap: 10 },
-
-  mark: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    padding: 16,
-    borderRadius: 20,
-    backgroundColor: HomeColors.surface,
-  },
-
-  markText: { flex: 1 },
-  markName: { fontSize: 16, fontWeight: "700", color: HomeColors.text },
-  markMuscle: { marginTop: 2, fontSize: 12, color: HomeColors.textSecondary },
-
-  markBest: { alignItems: "flex-end" },
-
-  markWeight: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: HomeColors.primary,
-    fontVariant: ["tabular-nums"],
-  },
-
-  markReps: { marginTop: 1, fontSize: 12, color: HomeColors.textSecondary },
-
-  empty: {
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: HomeColors.surface,
   },
 
   emptyText: {

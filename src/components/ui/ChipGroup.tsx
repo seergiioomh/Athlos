@@ -11,6 +11,8 @@ interface Props<T> {
   options: Option<T>[];
   value: T | undefined;
   onChange: (value: T) => void;
+  /** Acento local para no imponer el color de una pantalla al resto. */
+  accent?: string;
 }
 
 /**
@@ -21,6 +23,7 @@ export function ChipGroup<T extends string | number>({
   options,
   value,
   onChange,
+  accent = HomeColors.primary,
 }: Props<T>) {
   return (
     <View style={styles.group}>
@@ -32,11 +35,14 @@ export function ChipGroup<T extends string | number>({
             key={String(option.value)}
             activeOpacity={0.85}
             onPress={() => onChange(option.value)}
-            style={[styles.chip, selected && styles.chipSelected]}
+            style={[
+              styles.chip,
+              selected && { backgroundColor: `${accent}26`, borderColor: accent },
+            ]}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
           >
-            <Text style={[styles.label, selected && styles.labelSelected]}>
+            <Text style={[styles.label, selected && { color: accent }]}>
               {option.label}
             </Text>
           </TouchableOpacity>
@@ -62,18 +68,9 @@ const styles = StyleSheet.create({
     borderColor: HomeColors.border,
   },
 
-  chipSelected: {
-    backgroundColor: HomeColors.primarySoft,
-    borderColor: HomeColors.primary,
-  },
-
   label: {
     fontSize: 14,
     fontWeight: "600",
     color: HomeColors.textSecondary,
-  },
-
-  labelSelected: {
-    color: HomeColors.primary,
   },
 });
