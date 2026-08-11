@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { create } from "zustand";
 
 import { supabase } from "@/lib/supabase";
+import { unregisterPush } from "@/services/notifications";
 
 type Status = "loading" | "signed-in" | "signed-out";
 
@@ -98,6 +99,11 @@ export async function signUp(
 }
 
 export async function signOut() {
+  // Antes de cerrar, mientras las políticas todavía dejan borrar la fila: si
+  // no, este móvil seguiría recibiendo los avisos de una cuenta que ya salió.
+  // Que falle no puede impedir salir, que es lo que el usuario ha pedido.
+  await unregisterPush().catch(() => {});
+
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }

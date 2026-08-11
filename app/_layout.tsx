@@ -14,6 +14,7 @@ import {
   useSession,
 } from "@/features/auth/session";
 import { HomeColors } from "@/features/home/home-theme";
+import { usePushNotifications } from "@/features/notifications/push";
 import { useProfile } from "@/features/onboarding/queries";
 import { configError } from "@/lib/supabase";
 
@@ -53,6 +54,7 @@ export default function RootLayout() {
 function RootNavigator() {
   useInitSession();
   useRecoveryLink();
+  usePushNotifications();
 
   const { status } = useSession();
   const recovering = useRecovering();

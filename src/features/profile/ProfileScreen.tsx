@@ -43,6 +43,7 @@ import {
   EditProfileSheet,
   type EditSection,
 } from "./components/EditProfileSheet";
+import { NotificationsCard } from "./components/NotificationsCard";
 import {
   useActiveCycle,
   useDeleteAccount,
@@ -347,6 +348,18 @@ export function ProfileScreen() {
           />
         </View>
 
+        {/* --------------------------------------------------------- avisos */}
+        <Text style={styles.sectionAlone}>Avisos</Text>
+
+        <NotificationsCard
+          enabled={profile.notifications_enabled}
+          hour={profile.reminder_hour}
+          onToggle={(notifications_enabled) =>
+            update.mutate({ notifications_enabled })
+          }
+          onChangeHour={(reminder_hour) => update.mutate({ reminder_hour })}
+        />
+
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => signOut()}
@@ -556,6 +569,15 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: { fontSize: 18, fontWeight: "700", color: HomeColors.text },
+
+  // Sin botón de editar al lado: se ajusta en la propia tarjeta.
+  sectionAlone: {
+    marginTop: 30,
+    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: "700",
+    color: HomeColors.text,
+  },
 
   planButton: {
     marginTop: 24,

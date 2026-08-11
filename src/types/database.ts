@@ -87,6 +87,11 @@ export interface ProfileRow {
   cardio: Cardio | null;
   limitations: string | null;
   avoid_exercises: string | null;
+  notifications_enabled: boolean;
+  /** Hora local del recordatorio, 0-23. */
+  reminder_hour: number;
+  /** IANA ("Europe/Madrid"). La manda el móvil al registrar el token. */
+  timezone: string | null;
   onboarded_at: string | null;
   created_at: string;
 }
@@ -138,6 +143,12 @@ export interface WorkoutSessionRow {
   started_at: string;
   finished_at: string | null;
   notes: string | null;
+  focus: string | null;
+  rating: number | null;
+  energy_before: number | null;
+  energy_during: number | null;
+  ate_well: boolean | null;
+  discomfort: string | null;
 }
 
 export interface SessionSetRow {
