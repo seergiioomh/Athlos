@@ -127,9 +127,9 @@ const styles = StyleSheet.create({
     maxWidth: "92%",
     padding: 14,
     borderRadius: 20,
-    backgroundColor: HomeColors.primarySoft,
+    backgroundColor: HomeColors.purpleSoft,
     borderWidth: 1,
-    borderColor: HomeColors.primary,
+    borderColor: HomeColors.purple,
   },
 
   // Una vez resuelta deja de pedir atención: ya no hay nada que decidir.
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.7,
-    color: HomeColors.primary,
+    color: HomeColors.purple,
   },
 
   title: {
@@ -184,12 +184,12 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: 14,
     alignItems: "center",
-    backgroundColor: HomeColors.primary,
+    backgroundColor: HomeColors.purple,
   },
 
-  applyBusy: { backgroundColor: HomeColors.primaryMuted },
+  applyBusy: { backgroundColor: HomeColors.purpleSoft },
 
-  applyText: { fontSize: 14, fontWeight: "700", color: HomeColors.onPrimary },
+  applyText: { fontSize: 14, fontWeight: "700", color: HomeColors.text },
 
   resolved: {
     marginTop: 12,

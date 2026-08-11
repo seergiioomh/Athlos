@@ -157,12 +157,12 @@ export function WeightChart({ history }: Props) {
               <LinearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
                 <Stop
                   offset="0"
-                  stopColor={HomeColors.primary}
+                  stopColor={HomeColors.pink}
                   stopOpacity="0.3"
                 />
                 <Stop
                   offset="1"
-                  stopColor={HomeColors.primary}
+                  stopColor={HomeColors.pink}
                   stopOpacity="0"
                 />
               </LinearGradient>
@@ -193,7 +193,7 @@ export function WeightChart({ history }: Props) {
                 y1={TOP}
                 x2={current[0]}
                 y2={BOTTOM}
-                stroke={HomeColors.primary}
+                stroke={HomeColors.pink}
                 strokeWidth="1"
                 strokeDasharray="3 3"
                 opacity={0.5}
@@ -203,7 +203,7 @@ export function WeightChart({ history }: Props) {
             <Path
               d={line}
               fill="none"
-              stroke={HomeColors.primary}
+              stroke={HomeColors.pink}
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -218,7 +218,7 @@ export function WeightChart({ history }: Props) {
                 r={index === selected ? "3" : "2.4"}
                 // Siempre rellenos; el pulsado se distingue por el aro
                 // blanco, no por el hueco.
-                fill={HomeColors.primary}
+                fill={HomeColors.pink}
                 stroke={index === selected ? "#FFFFFF" : "transparent"}
                 strokeWidth={index === selected ? "2" : "0"}
                 vectorEffect="non-scaling-stroke"

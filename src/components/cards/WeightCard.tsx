@@ -75,14 +75,14 @@ export function WeightCard({ onPress, history }: Props) {
     <Card style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.title}>Evolución de peso</Text>
-        <View style={styles.action}><HugeiconsIcon icon={ArrowUpRight01Icon} color={HomeColors.primary} size={17} strokeWidth={2.2} /></View>
+        <View style={styles.action}><HugeiconsIcon icon={ArrowUpRight01Icon} color={HomeColors.pink} size={17} strokeWidth={2.2} /></View>
       </View>
 
       <Text selectable style={styles.weight}>
         {format(current)}<Text style={styles.unit}> kg</Text>
       </Text>
 
-      {/* La cifra destaca en lima y el periodo se queda en gris: es contexto,
+      {/* La variación destaca en rosa y el periodo se queda en gris: es contexto,
           no el dato. */}
       <Text style={styles.delta}>
         <Text style={styles.deltaValue}>
@@ -97,14 +97,14 @@ export function WeightCard({ onPress, history }: Props) {
         <Svg width="100%" height="100%" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="none">
           <Defs>
             <LinearGradient id="cardArea" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={HomeColors.primary} stopOpacity="0.3" />
-              <Stop offset="1" stopColor={HomeColors.primary} stopOpacity="0" />
+              <Stop offset="0" stopColor={HomeColors.pink} stopOpacity="0.3" />
+              <Stop offset="1" stopColor={HomeColors.pink} stopOpacity="0" />
             </LinearGradient>
           </Defs>
 
           {history.length > 1 && <Path d={area} fill="url(#cardArea)" />}
 
-          <Path d={line} fill="none" stroke={HomeColors.primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <Path d={line} fill="none" stroke={HomeColors.pink} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </Svg>
       </View>
     </Card>
@@ -116,12 +116,12 @@ const styles = StyleSheet.create({
   card: { minHeight: 206, padding: 12, marginBottom: 0, borderRadius: 18, backgroundColor: HomeColors.surface, borderWidth: 0, boxShadow: "none", shadowOpacity: 0, shadowRadius: 0, elevation: 0 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 6 },
   title: { flex: 1, fontSize: 13, lineHeight: 16, fontWeight: "700", color: HomeColors.text },
-  action: { width: 24, height: 24, borderRadius: 7, backgroundColor: HomeColors.primarySoft, alignItems: "center", justifyContent: "center" },
+  action: { width: 24, height: 24, borderRadius: 7, backgroundColor: HomeColors.pinkSoft, alignItems: "center", justifyContent: "center" },
   weight: { marginTop: 10, color: HomeColors.text, fontSize: 28, fontWeight: "700", letterSpacing: -1.2, fontVariant: ["tabular-nums"] },
   unit: { color: HomeColors.textSecondary, fontSize: 13, fontWeight: "600", letterSpacing: 0 },
   delta: { marginTop: 2, fontSize: 12, fontWeight: "600", color: HomeColors.textSecondary, fontVariant: ["tabular-nums"] },
   // El signo ya dice si sube o baja; teñirlo de verde o rojo daría por hecho
   // que bajar es bueno, y eso depende del objetivo de cada uno.
-  deltaValue: { color: HomeColors.primary },
+  deltaValue: { color: HomeColors.pink },
   chart: { flex: 1, marginTop: 10, marginHorizontal: -12, marginBottom: -12, overflow: "hidden", borderBottomLeftRadius: 18, borderBottomRightRadius: 18 },
 });

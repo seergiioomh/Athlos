@@ -11,6 +11,8 @@ interface Props<T> {
   options: Option<T>[];
   value: T | undefined;
   onChange: (value: T) => void;
+  /** Acento local para no imponer el color de una pantalla al resto. */
+  accent?: string;
 }
 
 /**
@@ -29,6 +31,7 @@ export function SegmentedControl<T extends string | number>({
   options,
   value,
   onChange,
+  accent = HomeColors.primary,
 }: Props<T>) {
   return (
     <View style={styles.track} accessibilityRole="radiogroup">
@@ -40,12 +43,12 @@ export function SegmentedControl<T extends string | number>({
             key={String(option.value)}
             activeOpacity={0.85}
             onPress={() => onChange(option.value)}
-            style={[styles.segment, selected && styles.segmentSelected]}
+            style={[styles.segment, selected && [styles.segmentSelected, { borderColor: accent }]]}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
           >
             <Text
-              style={[styles.label, selected && styles.labelSelected]}
+              style={[styles.label, selected && [styles.labelSelected, { color: accent }]]}
               numberOfLines={1}
             >
               {option.label}

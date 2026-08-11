@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: HomeColors.primary,
   },
 
-  primaryBusy: { backgroundColor: HomeColors.primaryMuted },
+  primaryBusy: { backgroundColor: HomeColors.primarySoft },
 
   primaryText: { fontSize: 15, fontWeight: "700", color: HomeColors.onPrimary },
 

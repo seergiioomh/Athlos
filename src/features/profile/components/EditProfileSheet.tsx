@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     backgroundColor: HomeColors.primary,
   },
 
-  saveDisabled: { backgroundColor: HomeColors.primaryMuted },
+  saveDisabled: { backgroundColor: HomeColors.primarySoft },
 
   saveText: { fontSize: 16, fontWeight: "700", color: HomeColors.onPrimary },
 });

@@ -113,7 +113,7 @@ export function CoachScreen() {
               <HugeiconsIcon
                 icon={SparklesIcon}
                 size={18}
-                color={HomeColors.primary}
+                color={HomeColors.purple}
                 strokeWidth={2.2}
               />
             </View>
@@ -129,7 +129,7 @@ export function CoachScreen() {
 
         {isPending ? (
           <View style={styles.centered}>
-            <ActivityIndicator color={HomeColors.primary} />
+            <ActivityIndicator color={HomeColors.purple} />
           </View>
         ) : error ? (
           <View style={styles.centered}>
@@ -267,7 +267,7 @@ export function CoachScreen() {
             <HugeiconsIcon
               icon={SentIcon}
               size={20}
-              color={HomeColors.onPrimary}
+              color={HomeColors.text}
               strokeWidth={2}
             />
           </TouchableOpacity>
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: HomeColors.primarySoft,
+    backgroundColor: HomeColors.purpleSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
 
   mine: {
     alignSelf: "flex-end",
-    backgroundColor: HomeColors.primary,
+    backgroundColor: HomeColors.purple,
     borderBottomRightRadius: 6,
   },
 
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   },
 
   bubbleText: { fontSize: 15, lineHeight: 21, color: HomeColors.text },
-  mineText: { color: HomeColors.onPrimary },
+  mineText: { color: HomeColors.text },
 
   typing: { flexDirection: "row", alignItems: "center", gap: 8 },
   typingText: { fontSize: 14, color: HomeColors.textSecondary },
@@ -444,8 +444,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: HomeColors.primary,
+    backgroundColor: HomeColors.purple,
   },
 
-  sendDisabled: { backgroundColor: HomeColors.primaryMuted },
+  sendDisabled: { backgroundColor: HomeColors.purpleSoft },
 });
