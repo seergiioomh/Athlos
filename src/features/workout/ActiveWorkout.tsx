@@ -24,7 +24,7 @@ import { useUserId } from "@/features/auth/session";
 interface Props {
   plan: WorkoutPlan;
   onBack: () => void;
-  onFinish: () => void;
+  onFinish: (sessionId: string) => void;
 }
 
 export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
@@ -51,7 +51,7 @@ export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
     queryClient.invalidateQueries({ queryKey: ["progress"] });
     queryClient.invalidateQueries({ queryKey: ["home"] });
 
-    onFinish();
+    onFinish(sessionId!);
   };
 
   return (

@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -20,10 +20,12 @@ import {
 } from "@/features/profile/queries";
 import { errorMessage } from "@/utils/errors";
 import { ActiveWorkout } from "./ActiveWorkout";
+import { WorkoutCompletionScreen } from "./WorkoutCompletionScreen";
 import { useGeneratePlan, useLatestPlan } from "./queries";
 
 export function WorkoutScreen() {
   const router = useRouter();
+  const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
 
   const { data: plan, isPending, error, refetch } = useLatestPlan();
   const generate = useGeneratePlan();
@@ -82,7 +84,16 @@ export function WorkoutScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      {isPending ? (
+      {completedSessionId && plan ? (
+        <WorkoutCompletionScreen
+          sessionId={completedSessionId}
+          onOpenCoach={() => router.push("/(tabs)/coach")}
+          onContinue={() => {
+            setCompletedSessionId(null);
+            router.replace("/(tabs)/progress");
+          }}
+        />
+      ) : isPending ? (
         <Centered>
           <ActivityIndicator color={HomeColors.primary} />
         </Centered>
@@ -141,7 +152,7 @@ export function WorkoutScreen() {
           key={pending.id}
           plan={pending}
           onBack={back}
-          onFinish={() => router.push("/(tabs)/progress")}
+          onFinish={setCompletedSessionId}
         />
       ) : generate.error ? (
         <Centered>

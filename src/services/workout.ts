@@ -3,6 +3,12 @@ import type { PlanExerciseWithExercise, WorkoutPlanRow } from "@/types/database"
 import type { SharedWorkout } from "@/features/workout/share";
 import type { CompletedSet, WorkoutPlan } from "@/features/workout/types";
 
+export interface SessionFeedback {
+  energyDuring: number | null;
+  rating: number | null;
+  notes: string | null;
+}
+
 const PLAN_SELECT = `
   id, user_id, title, focus, scheduled_for, source, ai_model, shared_by,
   completed_at, created_at,
@@ -290,6 +296,25 @@ export async function saveSet(
   sessionId: string,
   set: CompletedSet & { planExerciseId: string }
 ): Promise<void> {
+  // La sesión se crea al abrir el entrenamiento para tener un id al registrar
+  // la primera serie. Su hora real de inicio, sin embargo, es esta primera
+  // serie, no el momento en que se curioseó la pantalla.
+  const { count, error: countError } = await supabase
+    .from("session_sets")
+    .select("id", { count: "exact", head: true })
+    .eq("session_id", sessionId);
+
+  if (countError) throw countError;
+
+  if (count === 0) {
+    const { error: sessionError } = await supabase
+      .from("workout_sessions")
+      .update({ started_at: new Date().toISOString() })
+      .eq("id", sessionId);
+
+    if (sessionError) throw sessionError;
+  }
+
   // Upsert sobre (session_id, exercise_id, set_number): corregir una serie ya
   // cerrada actualiza la fila en vez de duplicarla.
   const { error } = await supabase.from("session_sets").upsert(
@@ -345,4 +370,21 @@ export async function finishSession(
     .eq("id", planId);
 
   if (planError) throw planError;
+}
+
+/** Guarda el cierre subjetivo de la sesión para que el coach pueda usarlo. */
+export async function saveSessionFeedback(
+  sessionId: string,
+  feedback: SessionFeedback
+): Promise<void> {
+  const { error } = await supabase
+    .from("workout_sessions")
+    .update({
+      energy_during: feedback.energyDuring,
+      rating: feedback.rating,
+      notes: feedback.notes,
+    })
+    .eq("id", sessionId);
+
+  if (error) throw error;
 }

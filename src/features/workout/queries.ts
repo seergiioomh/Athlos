@@ -7,6 +7,7 @@ import {
   importSharedWorkout,
   openSession,
   planHasLoggedSets,
+  saveSessionFeedback,
 } from "@/services/workout";
 import type { SharedWorkout } from "./share";
 import { useUserId } from "@/features/auth/session";
@@ -110,5 +111,22 @@ export function useSession(planId: string | undefined) {
     // al volver a la pantalla.
     staleTime: Infinity,
     gcTime: Infinity,
+  });
+}
+
+export function useSaveSessionFeedback() {
+  return useMutation({
+    mutationFn: ({
+      sessionId,
+      energyDuring,
+      rating,
+      notes,
+    }: {
+      sessionId: string;
+      energyDuring: number | null;
+      rating: number | null;
+      notes: string | null;
+    }) => saveSessionFeedback(sessionId, { energyDuring, rating, notes }),
+    retry: false,
   });
 }
