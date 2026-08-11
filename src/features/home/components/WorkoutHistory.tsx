@@ -46,7 +46,7 @@ const buildDays = (sessions: WeekSession[]) => {
       .reverse()
       .find(
         (item) =>
-          item.finishedAt && isSameDay(new Date(item.startedAt), date)
+          item.finishedAt && isSameDay(new Date(item.finishedAt), date)
       );
 
     return {
@@ -119,11 +119,10 @@ export function WorkoutHistory({ onPress, onSelectDay, sessions }: Props) {
         <Text style={[styles.day, item.isToday && styles.selectedText]}>{item.day}</Text><Text style={[styles.date, item.isToday && styles.selectedText]}>{item.date}</Text>
         <View style={[
           styles.dot,
-          { backgroundColor: item.isToday
-            // Sobre la tarjeta naranja el verde no se lee: mantenemos la
-            // información con blanco lleno o traslúcido.
-            ? (item.trained ? HomeColors.onPrimary : "rgba(12,17,2,0.35)")
-            : (item.trained ? HomeColors.success : HomeColors.border) },
+          { backgroundColor: item.trained
+            // Una sesión completada conserva el verde, también en el día actual.
+            ? HomeColors.success
+            : (item.isToday ? "rgba(12,17,2,0.35)" : HomeColors.border) },
         ]} />
       </TouchableOpacity>}
     />
