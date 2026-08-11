@@ -1,6 +1,7 @@
 import { ArrowLeft01Icon, FireIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -15,9 +16,9 @@ import { HomeColors } from "@/features/home/home-theme";
 import { errorMessage } from "@/utils/errors";
 import { useStreak } from "./queries";
 import {
-  nextTier,
   rangeLabel,
   streakTier,
+  type StreakTier,
   tiersAscending,
 } from "./streak-tiers";
 
@@ -27,8 +28,10 @@ export function StreakScreen() {
 
   const streak = data ?? 0;
   const current = streakTier(streak);
-  const upcoming = nextTier(streak);
   const tiers = tiersAscending();
+  const [preview, setPreview] = useState<StreakTier | null>(null);
+  const displayed = preview ?? current;
+  const previewing = preview !== null;
 
   const back = () => {
     if (router.canGoBack()) {
@@ -92,72 +95,77 @@ export function StreakScreen() {
 
         <Text style={styles.section}>Tu insignia</Text>
 
-        <View style={styles.currentCard}>
-          <StreakRing tier={current} size={78} />
+        <View
+          style={[
+            styles.currentCard,
+            { backgroundColor: displayed.background, borderColor: displayed.border },
+          ]}
+        >
+          <StreakRing tier={displayed} size={78} />
 
           <View style={styles.currentText}>
             <View style={[styles.badge, { backgroundColor: HomeColors.surfaceElevated }]}>
-              <Text style={[styles.badgeText, { color: current.flame }]}>
-                Actual
+              <Text style={[styles.badgeText, { color: displayed.flame }]}>
+                {previewing ? "Vista previa" : "Actual"}
               </Text>
             </View>
 
-            <Text style={styles.currentName}>{current.name}</Text>
-            <Text style={[styles.currentRange, { color: current.flame }]}>
+            <Text style={styles.currentName}>{displayed.name}</Text>
+            <Text style={[styles.currentRange, { color: displayed.flame }]}>
               {rangeLabel({
-                from: current.from,
-                to: tiers.find((tier) => tier.from === current.from)?.to ?? null,
+                from: displayed.from,
+                to: tiers.find((tier) => tier.from === displayed.from)?.to ?? null,
               })}
             </Text>
-            <Text style={styles.currentHint}>{current.hint}</Text>
+            <Text style={styles.currentHint}>{displayed.hint}</Text>
           </View>
         </View>
-
-        {upcoming && (
-          <Text style={styles.next}>
-            Te {upcoming.from - streak === 1 ? "queda" : "quedan"}{" "}
-            <Text style={{ color: upcoming.flame }}>
-              {upcoming.from - streak}
-            </Text>{" "}
-            para {upcoming.name}.
-          </Text>
-        )}
 
         <Text style={styles.section}>Todos los rangos</Text>
 
         <View style={styles.grid}>
           {tiers.map((tier) => {
             const active = tier.from === current.from;
+            const achieved = streak >= tier.from;
+            const previewed = tier.from === preview?.from;
+            const highlighted = active || previewed;
 
             return (
-              <View
+              <TouchableOpacity
                 key={tier.name}
+                activeOpacity={0.78}
+                onPress={() => setPreview(previewed || active ? null : tier)}
                 style={[
                   styles.tile,
-                  active && { borderColor: tier.flame },
+                  (achieved || previewed) && { backgroundColor: tier.background },
+                  highlighted && { borderColor: tier.border },
                 ]}
               >
                 <Text
                   style={[
                     styles.tileRange,
-                    active && { color: tier.flame },
+                    (achieved || previewed) && { color: tier.text },
                   ]}
                 >
                   {rangeLabel(tier)}
                 </Text>
 
-                <StreakRing tier={tier} size={46} locked={streak < tier.from} />
+                <StreakRing tier={tier} size={46} locked={streak < tier.from && !previewed} />
 
                 <Text
-                  style={[styles.tileName, active && { color: tier.flame }]}
+                  style={[styles.tileName, (achieved || previewed) && { color: tier.text }]}
                   numberOfLines={1}
                 >
                   {tier.name}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
+
+        <Text style={styles.previewHint}>
+          Toca una insignia bloqueada para verla activa. No cambia tu racha.
+        </Text>
 
         <Text style={styles.footnote}>
           La racha aguanta tus días de descanso: solo se rompe si dejas pasar
@@ -237,7 +245,7 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 16,
     borderRadius: 20,
-    backgroundColor: HomeColors.surface,
+    borderWidth: 1,
   },
 
   currentText: { flex: 1 },
@@ -267,13 +275,6 @@ const styles = StyleSheet.create({
     color: HomeColors.textSecondary,
   },
 
-  next: {
-    marginTop: 12,
-    fontSize: 13,
-    fontWeight: "600",
-    color: HomeColors.textSecondary,
-  },
-
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 
   tile: {
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: HomeColors.surface,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: HomeColors.border,
   },
 
   tileRange: { fontSize: 10, color: HomeColors.textSecondary },
@@ -295,6 +296,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: HomeColors.text,
     textAlign: "center",
+  },
+
+  previewHint: {
+    marginTop: 10,
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: "center",
+    color: HomeColors.textTertiary,
   },
 
   footnote: {
