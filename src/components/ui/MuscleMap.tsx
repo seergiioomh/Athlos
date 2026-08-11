@@ -31,10 +31,6 @@ const REGIONS: Record<BodyRegion, { start: number; end: number }> = {
   full: { start: 0, end: 1 },
 };
 
-// Intensidad 1 y 2. El lima apagado marca "se trabaja", el pleno "es el eje
-// de la sesión".
-const INTENSITY_COLORS = ["#6E8A1E", Colors.primary] as const;
-
 // --------------------------------------------------------------- encuadre
 // Estos cuatro números son el encuadre de la figura dentro de su hueco. Se
 // ajustan a ojo, así que van juntos y con nombre.
@@ -57,6 +53,7 @@ export function MuscleMap({ exercises, size = 142 }: Props) {
 
   if (parts.length === 0) return null;
 
+  const side = bestSideFor(exercises);
   const bounds = REGIONS[regionFor(parts)];
 
   // La figura se agranda hasta que la franja elegida llena el hueco (por
@@ -79,11 +76,15 @@ export function MuscleMap({ exercises, size = 142 }: Props) {
         }}
       >
         <Body
-          data={parts}
-          side={bestSideFor(exercises)}
+          data={parts.map((part) => ({
+            slug: part.slug,
+            // Principal en el lima de la marca, secundario en morado: de un
+            // vistazo se ve qué es el eje del día y qué se lleva de paso.
+            color: part.role === "primary" ? Colors.primary : Colors.purple,
+          }))}
+          side={side}
           gender="male"
           scale={scale}
-          colors={INTENSITY_COLORS}
           // Lo que no se trabaja queda como silueta, no invisible: hace falta
           // ver el cuerpo para entender qué parte está encendida.
           defaultFill={Colors.surfaceElevated}

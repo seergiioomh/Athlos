@@ -1,4 +1,4 @@
-import type { ExtendedBodyPart, Slug } from "react-native-body-highlighter";
+import type { Slug } from "react-native-body-highlighter";
 
 import type { SuggestedExercise } from "./types";
 
@@ -35,28 +35,47 @@ const MUSCLE_SLUGS: Record<string, Slug[]> = {
   "Cuerpo completo": ["chest", "upper-back", "quadriceps", "abs"],
 };
 
-/** Zonas que solo existen en la vista de espaldas. */
+/**
+ * Zonas que solo existen en una de las dos vistas de la ilustración —no es
+ * una limitación nuestra, es anatomía: no se ve el bíceps de espaldas. Sirve
+ * para decidir qué cara enseñar: la que tenga más que contar.
+ */
 const BACK_ONLY: Slug[] = ["gluteal", "hamstring", "lower-back", "upper-back"];
 
+export interface MuscleHit {
+  slug: Slug;
+  /**
+   * Principal si algún ejercicio lo pone como su primer grupo (el nombre por
+   * el que se le conoce: "Bíceps" → biceps); secundario si solo aparece como
+   * zona extra de otro grupo (el dorsal que también enciende el peso muerto).
+   */
+  role: "primary" | "secondary";
+}
+
 /**
- * Cuántos ejercicios tocan cada zona, convertido a la intensidad que espera
- * la ilustración: 1 para una sola aparición, 2 a partir de dos.
+ * Qué zonas tocan estos ejercicios, y si cada una es el objetivo del
+ * ejercicio o algo que se lleva de paso. La primera zona de cada grupo en
+ * `MUSCLE_SLUGS` es la que da nombre al grupo, así que manda como principal
+ * en cuanto un ejercicio la nombra así, aunque otro la traiga solo de
+ * refuerzo.
  */
 export function bodyPartsFor(
   exercises: Pick<SuggestedExercise, "muscleGroup">[]
-): ExtendedBodyPart[] {
-  const hits = new Map<Slug, number>();
+): MuscleHit[] {
+  const roles = new Map<Slug, "primary" | "secondary">();
 
   for (const exercise of exercises) {
-    for (const slug of MUSCLE_SLUGS[exercise.muscleGroup] ?? []) {
-      hits.set(slug, (hits.get(slug) ?? 0) + 1);
-    }
+    const slugs = MUSCLE_SLUGS[exercise.muscleGroup] ?? [];
+
+    slugs.forEach((slug, index) => {
+      const role = index === 0 ? "primary" : "secondary";
+      if (role === "primary" || roles.get(slug) !== "primary") {
+        roles.set(slug, role);
+      }
+    });
   }
 
-  return [...hits.entries()].map(([slug, count]) => ({
-    slug,
-    intensity: count > 1 ? 2 : 1,
-  }));
+  return [...roles.entries()].map(([slug, role]) => ({ slug, role }));
 }
 
 /**
@@ -106,11 +125,9 @@ export type BodyRegion = "torso" | "legs" | "full";
  * las piernas en pantalla, y recortarlas deja la ilustración al doble de
  * tamaño en el mismo hueco.
  */
-export function regionFor(parts: ExtendedBodyPart[]): BodyRegion {
-  const legs = parts.some((part) => part.slug && LEG_SLUGS.includes(part.slug));
-  const torso = parts.some(
-    (part) => part.slug && !LEG_SLUGS.includes(part.slug)
-  );
+export function regionFor(parts: Pick<MuscleHit, "slug">[]): BodyRegion {
+  const legs = parts.some((part) => LEG_SLUGS.includes(part.slug));
+  const torso = parts.some((part) => !LEG_SLUGS.includes(part.slug));
 
   if (legs && torso) return "full";
 
