@@ -4,7 +4,7 @@ Documento de arranque para una sesión nueva. Recoge lo que **no se deduce
 leyendo el código**: las decisiones tomadas, por qué se tomaron, y los sitios
 donde ya nos hemos equivocado una vez.
 
-Última actualización: **8 de agosto de 2026**.
+Última actualización: **11 de agosto de 2026**.
 
 Complementa, no sustituye:
 
@@ -16,36 +16,28 @@ Complementa, no sustituye:
 
 ## Empieza aquí
 
-**La app funciona y está instalada en el iPhone del autor** por TestFlight
-(build 5). Registro, acceso, y sus datos cargando. Acaba de superarse la
-puesta en marcha de la autenticación real, que fue lo último grande.
+**La app funciona y está instalada en el iPhone del autor**, con una
+development build al día. Todo lo escrito está commiteado y subido a
+`origin/main`.
 
-Tres cosas que conviene saber antes de tocar nada:
+Cuatro cosas que conviene saber antes de tocar nada:
 
-1. **La confirmación de correo está ACTIVADA.** Con ella, el registro no abre
+1. **El entrenamiento va por CICLO, no por días de la semana.** Es el cambio
+   estructural más grande y toca casi todo. Ver *Conceptos del dominio*.
+
+2. **La confirmación de correo está ACTIVADA.** Con ella, el registro no abre
    sesión hasta abrir el enlace del correo. Ese enlace vuelve a la app por
    `athlos://confirm`, que tiene que estar dada de alta en *Authentication →
    URL Configuration*; si no, Supabase manda al *Site URL* y en un móvil no
    abre nada.
 
-2. **La huella de runtime está desalineada** con la build 5 instalada. No
-   afecta al día a día, pero impide mandar correcciones por aire hasta
-   restaurarla o compilar una build nueva. Ver *Despliegue*.
-
 3. **`0025_remove_dev_user.sql` no se ejecuta nunca.** Borraría la cuenta real
    del autor. Está desactivado, pero el nombre engaña.
 
-Los tres cambios que faltaban para abrir la app a otros usuarios **ya están
-escritos** (sin commitear, ver *Estado actual*):
-
-- **Recuperación de contraseña**, por enlace en el correo. Probada y
-  funcionando. La plantilla del correo **no se puede editar sin SMTP propio**,
-  así que el método del código de seis dígitos quedó descartado: se usa la
-  plantilla de serie y la app decide el destino con `redirectTo`.
-- **Mensajes de error en español**, en `src/utils/auth-errors.ts`. Traduce
-  primero por `code`, que es estable, y solo después por el texto.
-- **Borrado de cuenta**, con la función `delete_account()` de la migración
-  `0026`. Apple lo exige (directriz 5.1.1 v) para publicar.
+4. **El estado del servidor no vive en git.** Las migraciones aplicadas, los
+   secretos, las funciones desplegadas y el cron se configuran a mano en
+   Supabase. Que un archivo esté en el repositorio no significa que su SQL se
+   haya ejecutado.
 
 ---
 
@@ -53,8 +45,8 @@ escritos** (sin commitear, ver *Estado actual*):
 
 Un entrenador personal con IA, en español, para iPhone. No es una app de
 registro de gimnasio: la idea es que el entrenador **conozca al usuario, le
-acompañe y decida con él**. El entrenamiento del día, el reparto semanal y los
-consejos los genera Claude a partir del perfil y del historial real.
+acompañe y decida con él**. El entrenamiento del día, el ciclo de entrenamiento
+y los consejos los genera Claude a partir del perfil y del historial real.
 
 Autor: Sergio Mateos. Uso propio de momento.
 
@@ -67,10 +59,12 @@ mensajes de commit.
 
 ### Funciona
 
-Acceso y registro · bienvenida en 4 pasos · inicio con el entrenamiento del día
-· pantalla de entrenamiento con objetivos y registro de series · chat con el
-coach y propuestas aplicables · progreso con peso y racha · perfil · reparto
-semanal · pantalla de rachas.
+Acceso y registro · bienvenida en 7 pasos · inicio con el entrenamiento del día
+· pantalla de entrenamiento con objetivos y registro de series · pantalla de
+fin de entrenamiento con resumen y sensaciones · chat con el coach y propuestas
+aplicables · progreso con peso, actividad comparada y marcas por grupo · perfil
+· ciclo de entrenamiento · pantalla de rachas · compartir un entrenamiento por
+enlace · recordatorios push.
 
 ### Configuración viva
 
@@ -81,33 +75,35 @@ semanal · pantalla de rachas.
 | Supabase, *Redirect URLs* | `athlos://confirm` y `athlos://reset-password` |
 | Supabase, SMTP | El de serie. Pocos correos por hora y **plantillas no editables** |
 | Supabase, registros | Permitidos |
+| Supabase, migraciones | Aplicadas hasta `0033` |
+| Supabase, funciones | Cuatro desplegadas |
+| Supabase, extensiones | `pg_cron` y `pg_net` activas, cron `enviar-recordatorios` cada hora |
+| Supabase, secretos | `ANTHROPIC_API_KEY` y `CRON_SECRET` |
 | EAS, variables | Correctas en `production`, `preview` y `development` |
-| TestFlight | Build 5 instalada en el iPhone del autor |
+| TestFlight | Build de producción del 10 de agosto |
 | Pruebas externas | Sin configurar |
 | Rama | `main`, remoto `https://github.com/seergiioomh/Athlos.git`, privado |
 
 ### Pendiente
 
-- **Ejecutar `0026` y `0027`** en el SQL Editor y **redesplegar las tres Edge
-  Functions** con `--use-api`. Hasta que no se haga, `goal_notes` se guarda
-  pero el modelo no lo lee: toda la ganancia del rediseño está ahí parada.
-- **Compilar una development build nueva.** El icono y la pantalla de inicio
-  cambiaron, y eso va dentro del binario: en el móvil se sigue viendo el
-  antiguo.
-- La variante pequeña del icono, sin la chispa, para ajustes y notificaciones.
-  A 29 píxeles la chispa se convierte en un borrón.
-- Borrar la rama `master` del remoto, que quedó duplicada.
-- El `README.md` de la raíz sigue siendo la plantilla de Expo, y menciona un
-  script `reset-project` que ya no existe.
-- No hay política de privacidad, y la app manda a Anthropic datos personales
-  (peso, fecha de nacimiento, lesiones). Hace falta para publicar.
+- **No hay política de privacidad**, y la app manda a Anthropic datos
+  personales (peso, fecha de nacimiento, lesiones). Hace falta para publicar.
 - **No hay límite de gasto por usuario.** Cada persona que use la app consume
   la cuenta de Anthropic del autor, sin tope: alguien puede pedir veinte
-  entrenamientos seguidos o tener el chat abierto toda la tarde.
+  entrenamientos seguidos o tener el chat abierto toda la tarde. La caché de
+  prompts abarata cada llamada, pero no pone techo a cuántas se hacen.
+- **Los enlaces de compartir usan el esquema `athlos://`**, que WhatsApp no
+  convierte en enlace tocable: llega como texto plano. Arreglarlo son Universal
+  Links, que exigen un dominio propio, el archivo
+  `apple-app-site-association` servido por HTTPS y recompilar con el
+  entitlement `associatedDomains`. Aplazado a conciencia.
+- Borrar la rama `master` del remoto, que quedó duplicada.
+- No hay tests. Se comprueba con `tsc --noEmit` y `expo lint`.
 
 Ya resuelto, por si aparece en el historial y confunde: la contraseña de la
-base de datos se cambió, `EXPO_PUBLIC_DEV_USER_ID` se borró de EAS, y el caché
-del CLI de Supabase salió de git.
+base de datos se cambió, `EXPO_PUBLIC_DEV_USER_ID` se borró de EAS, el caché
+del CLI de Supabase salió de git, y el `README.md` dejó de ser la plantilla de
+Expo.
 
 ---
 
@@ -119,10 +115,11 @@ Expo SDK 54 · React Native 0.81 · TypeScript · expo-router 6 · Supabase.
 app/                     rutas (expo-router, enrutado por archivos)
   _layout.tsx            raíz: configuración → sesión → onboarding → app
   auth.tsx               acceso
-  onboarding.tsx         bienvenida, 4 pasos
+  onboarding.tsx         bienvenida, 7 pasos
   (tabs)/                inicio · entrenamiento · coach · progreso · perfil
-  weekly-plan.tsx        reparto semanal, encima de las pestañas
+  weekly-plan.tsx        ciclo de entrenamiento, encima de las pestañas
   rachas.tsx             detalle de la racha, encima de las pestañas
+  shared-workout.tsx     entrenamiento recibido por enlace (exige sesión)
 
 src/
   features/<área>/       pantalla + componentes + queries + tipos
@@ -134,7 +131,7 @@ src/
 
 supabase/
   migrations/            SQL numerado, se ejecuta a mano en el panel
-  functions/             tres Edge Functions (Deno)
+  functions/             cuatro Edge Functions (Deno)
   imports/               entrenamientos importados de las notas en papel
 ```
 
@@ -161,25 +158,71 @@ recortada por región —si toca torso se ve el torso, no el cuerpo entero, para
 que la tarjeta no crezca—. Debajo: nivel ATHLOS, peso, historial de la semana.
 La racha va arriba, al lado del avatar, y al pulsarla se abre su pantalla.
 
+En "Esta semana" se ven 7 días hacia atrás y 7 hacia delante, centrados en hoy.
+Tocar un día ya entrenado abre lo que se hizo ese día.
+
 **Entrenamiento.** Separa dos cosas que la gente confunde: los **objetivos
 sugeridos** por la IA (series, descanso, peso recomendado) que no se editan, y
-las **series registradas** por el usuario, que son lo que de verdad hizo.
+las **series registradas** por el usuario, que son lo que de verdad hizo. Al
+terminar aparece una pantalla de cierre con el resumen y tres preguntas de
+sensaciones, que el coach lee al preparar la siguiente sesión.
 
 **Coach.** Chat con la IA. Puede proponer cambios; el usuario los aplica o no.
 
-**Progreso.** Gráfica de peso interactiva con detalle, resumen y racha.
+**Progreso.** Gráfica de peso interactiva, "Tu actividad" comparada contra el
+periodo anterior, y las marcas por ejercicio filtradas por grupo muscular.
 
-**Perfil.** Datos, racha, y un botón que abre el reparto semanal en su propia
-pantalla para no saturar el perfil.
+El verde y el ámbar de la variación de peso **dependen del objetivo del
+usuario**, no de la dirección: manda el peso objetivo si existe, y si no el
+objetivo general. Con "fuerza" o "rendimiento", que no dicen nada sobre la
+báscula, el color se queda neutro. Dar por hecho que adelgazar es lo bueno
+mentía a media base de usuarios.
+
+**Perfil.** Datos, racha, ajustes de avisos, y un botón que abre el ciclo de
+entrenamiento en su propia pantalla para no saturar el perfil.
 
 ---
 
 ## Conceptos del dominio
 
+**El entrenamiento va por ciclo, no por días de la semana.** Es una rotación:
+sesión 1, 2, 3… y al terminar la última se vuelve a la primera. El usuario hace
+la siguiente cuando entrena, sea el día que sea.
+
+Antes el reparto estaba atado a días concretos (lunes empuje, miércoles
+tirón…), y saltarse un día generaba una contradicción que no tenía arreglo
+limpio: ¿el jueves toca lo del miércoles que no hiciste, o lo del jueves?
+Numerando las sesiones esa pregunta desaparece.
+
+Vive en `weekly_splits` —la tabla conserva el nombre antiguo— con la columna
+`cycle`, y cada plan guarda de qué ciclo y qué posición salió. `generate-workout`
+mira el último plan **completado** de ese ciclo y avanza uno.
+
+Un ciclo nuevo se guarda como **borrador** (`status: 'draft'`) y no toca al
+vigente hasta que el usuario lo aprueba. La función `approve_training_cycle()`
+archiva el activo y activa el nuevo en la misma transacción, y un índice único
+parcial garantiza que no haya dos activos a la vez. Si se activara al generarlo,
+una propuesta que el usuario ni llega a mirar le cambiaría los entrenamientos.
+
 **El plan vive hasta que se hace.** `fetchLatestPlan` trae el último plan esté
 hecho o no; la pantalla decide mirando `completedAt`. Si sigue pendiente, es el
 entrenamiento vigente por muchos días que pasen. Solo cuando se termina
 aparece "preparar el siguiente". No se genera uno nuevo cada día.
+
+**Los entrenamientos compartidos no entran en el ciclo.** Se guardan con
+`source: 'shared'` y **sin** `cycle_id`, y `fetchLatestPlan` los excluye con un
+`.neq("source", "shared")`.
+
+Ese filtro es la pieza que protege el ciclo de quien recibe, y quitarlo rompe
+algo sutil: aceptar el entrenamiento de un amigo lo convertiría en "el último
+plan", y al terminarlo la pantalla diría "prepara el siguiente" sobre la sesión
+de otro, dejando la tuya escondida detrás, sin hacer y sin que se note.
+
+El enlace lleva el entrenamiento **entero codificado dentro**, no un
+identificador: RLS impide que un usuario lea las filas de otro, así que apuntar
+a una fila ajena no funcionaría. Los ejercicios viajan por `slug` y no por id,
+porque un id es una fila de una base concreta y el slug identifica al ejercicio
+en sí, así que el móvil que lo recibe puede resolverlo contra su catálogo.
 
 **Nivel y experiencia** (`src/features/home/level.ts`). 50 puntos por sesión
 terminada, 5 por serie, 500 por nivel. Terminar pesa diez veces más que una
@@ -195,6 +238,20 @@ Esmeralda, Llama azul, Leyenda, Mítico. Cuanto más alta, más llamativa —el
 una propuesta que se guarda y se muestra, y la app la aplica con los permisos
 del usuario cuando él confirma.
 
+**Recordatorios push.** A quién avisar lo decide `users_to_remind()` en
+Postgres, no la Edge Function: es la única que puede mirar a todos los usuarios
+de una vez y cruzar sus días de entrenamiento, su hora elegida y su historial.
+
+Solo devuelve a quien hoy le toca entrenar, está en su hora local elegida y
+**todavía no ha terminado sesión hoy**. Esa última condición evita el aviso más
+molesto de todos: recordarte que entrenes justo después de haber entrenado.
+
+La hora local exige saber la zona horaria, y el servidor no puede deducirla: la
+manda el móvil al registrar el token. Sin ella se asume `Europe/Madrid`.
+
+El cron es **horario, no diario**, porque cada usuario elige su hora y puede
+estar en otro huso: cada pasada pregunta a quién le toca en ese momento.
+
 **La conversación caduca a los 5 días.** `RETENTION_DAYS` en
 `src/services/coach.ts` tiene que coincidir con el valor que usa la Edge
 Function al limpiar; si la app pidiera más de lo que se guarda, enseñaría
@@ -207,7 +264,7 @@ deporte de fuera con sus días, y limitaciones.
 
 El **campo libre** (`goal_notes`) es la pieza que más contexto aporta: una
 etiqueta dice "ganar músculo", una frase dice "ganar músculo y mejorar mi
-velocidad para el fútbol". Viaja a las tres Edge Functions.
+velocidad para el fútbol". Viaja a las tres funciones de IA.
 
 Zonas de interés, cardio, actividad diaria y horas de sueño **ya no se
 preguntan** en la bienvenida, pero siguen en la tabla, siguen editables desde
@@ -234,8 +291,9 @@ el plan por su cuenta. Si algún día se cambia, que sea porque él lo pida.
 
 ### 2. Las funciones sacan el usuario del token
 
-Las tres Edge Functions usan la clave de servicio y **se saltan RLS**. Por eso
-ninguna acepta un `user_id` en el cuerpo: lo sacan del `Authorization: Bearer`.
+Las Edge Functions usan la clave de servicio y **se saltan RLS**. Por eso
+ninguna de las que llama la app acepta un `user_id` en el cuerpo: lo sacan del
+`Authorization: Bearer`.
 
 ```ts
 async function userFromRequest(req, supabase): Promise<string | null> {
@@ -249,6 +307,12 @@ async function userFromRequest(req, supabase): Promise<string | null> {
 
 Aceptar el id del cuerpo dejaría a cualquiera pedir los datos de cualquiera.
 Fue un agujero real que hubo que cerrar; no lo reabras.
+
+La excepción es `send-reminders`, que no la llama ningún usuario: la llama el
+cron, y no hay token del que sacar a nadie. Por eso va desplegada con
+`--no-verify-jwt` y protegida con `CRON_SECRET` en una cabecera. **Si añades
+otra función sin JWT, tiene que llevar su propio secreto**: sin él queda
+abierta a quien dé con la URL.
 
 ### 3. Una sola paleta
 
@@ -290,10 +354,12 @@ Tablas, todas con RLS por `auth.uid()` (verificado):
 | `session_sets` | Series que registra el usuario de verdad |
 | `body_weight_entries` | Pesajes |
 | `coach_messages` | Conversación y propuestas. Caduca a los 5 días |
-| `weekly_splits` | Reparto semanal |
+| `weekly_splits` | El ciclo de entrenamiento. **El nombre es histórico**: guarda ciclos, no repartos por día de la semana |
+| `push_tokens` | Un móvil registrado para avisos. La clave es el token, no el usuario: una persona puede tener varios |
 
-Funciones: `progress_summary`, `exercise_progress`, `workout_streak`,
-`import_session`, `prune_coach_messages`, `handle_new_user`, `delete_account`.
+Funciones: `progress_summary`, `progress_period_summary`, `exercise_progress`,
+`workout_streak`, `approve_training_cycle`, `users_to_remind`, `import_session`,
+`prune_coach_messages`, `handle_new_user`, `delete_account`.
 
 `delete_account()` es `security definer` y **no recibe parámetros**: saca al
 usuario de `auth.uid()`, igual que las Edge Functions lo sacan del token.
@@ -325,14 +391,15 @@ Para vaciar entrenamientos sin tocar la cuenta,
 
 ## Edge Functions
 
-Tres, en Deno, desplegadas con `--use-api` (sin esa opción el CLI exige Docker
+Cuatro, en Deno, desplegadas con `--use-api` (sin esa opción el CLI exige Docker
 en local).
 
 | Función | Modelo | Qué hace |
 |---|---|---|
 | `generate-workout` | `claude-opus-5` | El entrenamiento del día |
-| `generate-split` | `claude-opus-5` | El reparto semanal |
+| `generate-split` | `claude-opus-5` | El ciclo de entrenamiento |
 | `coach-chat` | `claude-sonnet-5` | El chat, con herramientas |
+| `send-reminders` | — | Los avisos push. La llama el cron, no la app |
 
 Las dos de generación usan salida estructurada (`json_schema`), `thinking:
 adaptive` y respaldo de servidor (`betas: ["server-side-fallback-2026-07-01"]`
@@ -341,6 +408,28 @@ con `fallbacks: "default"`).
 Herramientas del coach — todas devuelven propuestas, ninguna escribe:
 `ajustar_ejercicio`, `sustituir_ejercicio`, `cambiar_reparto_semanal`,
 `actualizar_limitaciones`.
+
+### Caché de prompts
+
+Las tres de IA usan `cache_control: { type: "ephemeral" }`. Marca un punto de
+corte: **todo lo anterior** al marcador se cachea, y las llamadas siguientes lo
+reaprovechan mucho más barato.
+
+Se cachea lo que se repite sin cambiar: el prompt de sistema, el catálogo de
+ejercicios (que es la mayor parte del contexto), el perfil, y las definiciones
+de herramientas del coach.
+
+Dos condiciones que se rompen sin darse cuenta:
+
+- **La caché compara bytes exactos.** El catálogo lleva `.order("slug")` por
+  eso; sin un orden fijo, PostgREST puede devolver las filas en otro orden y el
+  bloque deja de coincidir consigo mismo.
+- **Los JSON van compactos**, sin `null, 2`. La indentación son bytes que se
+  pagan en cada llamada y el modelo no los necesita.
+
+`send-reminders` **no llama a ningún modelo**: los textos son fijos. Un aviso
+de "hoy toca entrenar" no mejora por generarlo con IA, y multiplicaría el coste
+por cada usuario y cada día.
 
 **El catálogo se filtra por material antes de mandarlo al modelo.** Si no,
 propone ejercicios con máquinas que el usuario no tiene.
@@ -405,6 +494,34 @@ imports multilínea se parten si buscas "la última línea que empieza por
 **Antes de culpar al caché, comprueba de dónde salen los datos.** Una vez se
 persiguió un "no se actualiza" que venía de la base de datos, no del valor por
 defecto que se estaba editando.
+
+**Los heredocs de Python en Windows meten CRLF.** `io.open(path, "w").write(s)`
+traduce los saltos de línea sin avisar, y el resultado son trece archivos que
+git da por reescritos enteros y una huella de runtime distinta. Si pasa:
+
+```bash
+sed -i 's/\r$//' <archivo>
+```
+
+**La cámara de iOS no escanea esquemas propios.** Un QR con `athlos://…` sale
+como "contenido no válido": solo acepta `http(s)`, wifi y contactos. Para
+conectar con el cliente de desarrollo hay que escanear **desde dentro de la
+app**, o escribir la URL de Metro a mano.
+
+**En `Share.share`, `url` y `message` son campos distintos.** En iOS `url`
+viaja como elemento propio del selector, que es lo que hace que la app
+receptora lo reconozca como enlace tocable; metido dentro de `message` llega
+como texto. En Android `url` se ignora del todo y tiene que ir en el mensaje.
+Aun así, WhatsApp no convierte en enlace un esquema propio como `athlos://`.
+
+**`cmd` no es bash.** `$(comando)` no se sustituye por nada, así que un
+`supabase secrets set CLAVE=$(openssl rand -hex 32)` guarda el secreto vacío y
+la CLI se limita a imprimir su ayuda. Se nota porque no confirma nada. Usa
+PowerShell.
+
+**El shell de Bash tampoco es PowerShell.** Un here-string `@'…'@` dentro de
+`git commit -m` deja el `@` como asunto del commit. Para mensajes de varias
+líneas, `git commit -F - <<'EOF'`.
 
 ### Las variables de EAS no son el `.env`
 
@@ -471,22 +588,18 @@ Y cuentan los **bytes**, no el contenido que ve git: el mismo archivo con CRLF
 y con LF da huellas distintas, y `git status` los da por iguales porque
 normaliza los saltos al comparar.
 
-Estado hoy: la build 5 espera `60dc546267f3db9ef9a077f4be9d9177272fe2d7`. Para
-volver a esa huella, el `.gitignore` tiene que ser el de `db157d7`, con LF:
+Cuando la huella se desalinee, **compilar sale más barato que pelearse con
+esto**: al compilar se calcula una huella nueva y las actualizaciones vuelven a
+salir solas.
+
+La huella también sirve para **comprobar que una build lleva de verdad lo que
+crees**. Si añades una dependencia nativa y la build sale con la misma huella
+que la anterior, no la lleva dentro. Al añadir `expo-notifications` se comprobó
+así antes de instalar nada:
 
 ```bash
-git show db157d7:.gitignore > .gitignore
+npx eas-cli build:list --limit 2
 ```
-
-Publicas, y lo dejas como estaba:
-
-```bash
-git checkout HEAD -- .gitignore
-```
-
-Nada de esto hará falta a partir de la siguiente build: al compilar se calcula
-una huella nueva y las actualizaciones vuelven a salir solas. **Si dudas,
-compilar sale más barato que pelearse con esto.**
 
 ### TestFlight
 

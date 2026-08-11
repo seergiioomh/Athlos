@@ -1,50 +1,81 @@
-# Welcome to your Expo app 👋
+# ATHLOS
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Un entrenador personal con IA, en español, para iPhone.
 
-## Get started
+No es una app de registro de gimnasio. La idea es que el entrenador **conozca
+al usuario, le acompañe y decida con él**: el entrenamiento del día, el ciclo
+de sesiones y los consejos los genera Claude a partir del perfil y del
+historial real de entrenamientos.
 
-1. Install dependencies
+Expo SDK 54 · React Native · TypeScript · expo-router · Supabase · Claude.
 
-   ```bash
-   npm install
-   ```
+## Documentación
 
-2. Start the app
+| Documento | Para qué |
+|---|---|
+| [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) | **Léelo antes de tocar código.** Decisiones tomadas, reglas que no se deducen del código, y las trampas que ya han costado tiempo una vez |
+| [`supabase/README.md`](supabase/README.md) | Puesta en marcha del backend, migración a migración |
+| [`AGENTS.md`](AGENTS.md) | Reglas mínimas para sesiones de Claude Code |
+| [`ROADMAP.md`](ROADMAP.md) | La visión original |
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Arrancar
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+El `.env` no viaja en git a propósito. Cópialo de `.env.example` y rellena los
+dos valores desde el panel de Supabase.
 
-## Learn more
+```bash
+npx expo start --clear
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+El `--clear` no es opcional la primera vez tras tocar el `.env`: las variables
+`EXPO_PUBLIC_` se incrustan en el bundle y el caché anterior no las tiene.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+**No hay Expo Go.** El proyecto usa módulos nativos (notificaciones, cliente de
+desarrollo), así que hace falta una development build instalada en el móvil:
 
-## Join the community
+```bash
+npx eas-cli build --profile development --platform ios
+```
 
-Join our community of developers creating universal apps.
+Con la build puesta, `npx expo start --dev-client` y se conecta sola si el
+móvil está en la misma red.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Comprobar antes de subir
+
+```bash
+npx tsc --noEmit
+```
+
+```bash
+npx expo lint
+```
+
+Las Edge Functions quedan fuera del `tsconfig` porque son Deno, no React
+Native: se comprueban al desplegarlas.
+
+## Estructura
+
+```
+app/                  rutas (expo-router, enrutado por archivos)
+src/
+  features/<área>/    pantalla + componentes + queries + tipos
+  services/           acceso a Supabase; ninguna otra capa lo toca
+  components/ui/      piezas compartidas
+  theme/              la paleta única
+supabase/
+  migrations/         SQL numerado, se ejecuta a mano en el panel
+  functions/          Edge Functions (Deno)
+```
+
+Las capas van en un solo sentido: pantalla → `queries.ts` (React Query) →
+`services/` (Supabase). Los componentes nunca llaman a `supabase`
+directamente, y los servicios no saben nada de React.
+
+## Idioma
+
+**Todo va en español**: interfaz, mensajes de error, comentarios del código y
+mensajes de commit.
