@@ -162,10 +162,17 @@ select set_config(
 select public.create_battle('Reto de prueba', 7) as battle_id;
 ```
 
-Y con el id devuelto, **en la misma pestaña** (la suplantación vive en esa
-conexión):
+**La suplantación dura una sola ejecución.** El editor usa un pool de
+conexiones, así que cada *Run* puede caer en otra y `set_config` se pierde. La
+primera sentencia hay que repetirla delante de cada tanda:
 
 ```sql
+select set_config(
+  'request.jwt.claims',
+  json_build_object('sub', (select id from auth.users where email = 'TU_CORREO'))::text,
+  false
+);
+
 select public.start_battle('<id>');
 select * from public.battle_score('<id>');
 ```
