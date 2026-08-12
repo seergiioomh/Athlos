@@ -11,6 +11,8 @@ Complementa, no sustituye:
 - `AGENTS.md` — reglas mínimas, se carga solo en cada sesión
 - `ROADMAP.md` — la visión original
 - `supabase/README.md` — puesta en marcha del backend, paso a paso
+- `BATALLAS.md` — diseño de las batallas y **en qué paso va**. A medias: si
+  vas a seguir por ahí, empieza por ese documento
 
 ---
 
@@ -75,7 +77,7 @@ entrenamiento por enlace · recordatorios push.
 | Supabase, *Redirect URLs* | `athlos://confirm` y `athlos://reset-password` |
 | Supabase, SMTP | El de serie. Pocos correos por hora y **plantillas no editables** |
 | Supabase, registros | Permitidos |
-| Supabase, migraciones | Aplicadas hasta `0034` |
+| Supabase, migraciones | Aplicadas hasta `0034`. La `0035` (batallas) **está sin ejecutar** |
 | Supabase, funciones | Cuatro desplegadas |
 | Supabase, extensiones | `pg_cron` y `pg_net` activas, cron `enviar-recordatorios` cada hora |
 | Supabase, secretos | `ANTHROPIC_API_KEY` y `CRON_SECRET` |
@@ -99,6 +101,8 @@ entrenamiento por enlace · recordatorios push.
   entitlement `associatedDomains`. Aplazado a conciencia.
 - Borrar la rama `master` del remoto, que quedó duplicada.
 - No hay tests. Se comprueba con `tsc --noEmit` y `expo lint`.
+- **Batallas a medio hacer**: el paso 1 está escrito y los pasos 2 y 3 no.
+  Todo el contexto en `BATALLAS.md`.
 
 Ya resuelto, por si aparece en el historial y confunde: la contraseña de la
 base de datos se cambió, `EXPO_PUBLIC_DEV_USER_ID` se borró de EAS, el caché
@@ -370,11 +374,21 @@ Tablas, todas con RLS por `auth.uid()` (verificado):
 | `weekly_splits` | El ciclo de entrenamiento. **El nombre es histórico**: guarda ciclos, no repartos por día de la semana |
 | `push_tokens` | Un móvil registrado para avisos. La clave es el token, no el usuario: una persona puede tener varios |
 | `user_achievements` | Cuándo se desbloqueó cada logro. Solo la fecha: si está conseguido lo dicen las métricas |
+| `battles` | Una competición entre amigos. Ver `BATALLAS.md` |
+| `battle_participants` | Quién compite y con qué objetivo, congelado al empezar |
 
 Funciones: `progress_summary`, `progress_period_summary`, `exercise_progress`,
 `workout_streak`, `approve_training_cycle`, `users_to_remind`,
 `achievement_metrics`, `import_session`, `prune_coach_messages`,
-`handle_new_user`, `delete_account`.
+`handle_new_user`, `delete_account`, y las de batallas
+(`battle_target`, `create_battle`, `start_battle`, `battle_score`,
+`is_battle_participant`).
+
+**`is_battle_participant()` es `security definer` por necesidad, no por
+comodidad.** Las políticas de `battle_participants` tienen que preguntar por
+`battle_participants`, y una subconsulta directa haría que Postgres entrara en
+recursión infinita evaluando la política contra sí misma. No la conviertas en
+invoker.
 
 `user_achievements` no tiene políticas de `update` ni `delete` a propósito: un
 logro conseguido no se edita ni se retira, y que la política no exista es la

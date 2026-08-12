@@ -45,6 +45,7 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0032_progress_period_activity.sql` | Comparación de "Tu actividad" contra el periodo anterior |
 | `0033_push_notifications.sql` | Tokens de push y a quién toca avisar |
 | `0034_achievements.sql` | Logros: métricas y fecha de desbloqueo |
+| `0035_battles.sql` | Batallas entre amigos: tablas y marcador. Ver `BATALLAS.md` |
 
 ### Archivos que no forman parte de la instalación
 
