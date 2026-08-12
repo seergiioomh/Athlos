@@ -101,8 +101,9 @@ entrenamiento por enlace · recordatorios push.
   entitlement `associatedDomains`. Aplazado a conciencia.
 - Borrar la rama `master` del remoto, que quedó duplicada.
 - No hay tests. Se comprueba con `tsc --noEmit` y `expo lint`.
-- **Batallas a medio hacer**: el paso 1 está escrito y los pasos 2 y 3 no.
-  Todo el contexto en `BATALLAS.md`.
+- **Batallas a medio hacer**: los pasos 1 y 2 (todo el SQL) están hechos; el
+  paso 3 —pantallas, tarjeta de Inicio y cierre por cron— no. Todo el contexto
+  en `BATALLAS.md`.
 
 Ya resuelto, por si aparece en el historial y confunde: la contraseña de la
 base de datos se cambió, `EXPO_PUBLIC_DEV_USER_ID` se borró de EAS, el caché

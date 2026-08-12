@@ -195,25 +195,57 @@ correo: a nadie se le invita aquí, eso es el paso 2.
 Entrena, vuelve a llamar a `battle_score` y comprueba que los puntos suben como
 dice la fórmula. Ese es el objetivo real del paso 1.
 
-### Paso 2 — Unirse: código, sala de espera y acceso entre cuentas ⬜ PENDIENTE
+### Paso 2 — Unirse: código, sala de espera y acceso entre cuentas ✅ HECHO
 
-Lo que falta:
+`supabase/migrations/0037_battle_join.sql`. Es el paso que abre el acceso entre
+cuentas, así que sigue sin haber ninguna política de insert o update en las
+tablas: escribir a mano se saltaría el aforo, la regla de una batalla a la vez
+y el estado de sala de espera.
 
-- `join_battle(codigo)`: valida que la batalla está en sala de espera, que no
-  está llena (8), que no participas ya y que no tienes otra activa.
-- `battle_preview(codigo)`: `security definer`, devuelve **solo** el nombre de
-  la batalla, quién la creó y cuántos van. Es lo que se ve antes de aceptar,
-  así que no puede filtrar nada más.
-- Caducidad de las invitaciones a los 7 días.
+| Función | Qué hace |
+|---|---|
+| `battle_preview(codigo)` | Lo que ves antes de entrar: nombre, quién la creó y cuántos van. **La única que puede llamar quien aún no participa**, así que no devuelve nada más |
+| `join_battle(codigo)` | Entrar, validando aforo, estado y que no tengas otra en curso |
+| `leave_battle(id)` | Salir de una sala de espera. Quien la creó no puede: tiene que cancelar |
+| `cancel_battle(id)` | Cancelar la sala. Solo el creador, solo antes de empezar |
+| `expire_stale_lobbies()` | Cancela salas de más de 7 días. La llama el cron en el paso 3 |
+| `battle_max_players()` | El aforo, 8, en un solo sitio |
 
-Es el paso que abre el acceso entre cuentas. Cuidado aquí.
+Dos detalles que no son adorno:
+
+- **`join_battle` bloquea la fila con `for update`.** Sin eso, dos personas
+  entrando a la vez pasan las dos la comprobación de aforo y la batalla acaba
+  con nueve.
+- **`leave_battle` y `cancel_battle` existen para no dejar a nadie atrapado.**
+  Como solo se permite una batalla a la vez, una sala que nunca arranca dejaría
+  a su creador sin poder crear ninguna otra jamás. `expire_stale_lobbies()`
+  cubre el caso de quien ni siquiera entra a cancelarla.
+- **`expire_stale_lobbies()` no la puede llamar la app.** No comprueba quién
+  llama porque la invoca el cron, así que se le revoca el permiso a `anon` y
+  `authenticated`.
 
 ### Paso 3 — Pantallas y avisos ⬜ PENDIENTE
 
-- Crear batalla, sala de espera con el código, clasificación en vivo, resultado.
-- Tarjeta en Inicio mientras está activa, con días restantes.
-- Cierre y aviso desde el cron: al empezar, a mitad si vas fuera del podio, y
-  el resultado final.
+Todo el SQL está listo; falta la app y el cierre automático.
+
+- **Capa de datos**: `src/services/battles.ts` y
+  `src/features/battles/queries.ts`, siguiendo el patrón del resto (pantalla →
+  queries → services, nunca `supabase` desde un componente).
+- **Pantallas**: crear batalla, sala de espera con el código, clasificación en
+  vivo y resultado. Entrada desde Perfil, junto a Logros.
+- **Tarjeta en Inicio** mientras está activa, con días restantes. Es lo urgente
+  y merece estar donde se mira todos los días.
+- **Cierre por cron**: falta una función que cierre las batallas vencidas,
+  calcule el ganador (`winner_id`) y avise. Puede colgar del cron horario que
+  ya existe para los recordatorios, llamando también a
+  `expire_stale_lobbies()`.
+- **Avisos, solo 3 momentos**: al empezar, a mitad si vas fuera del podio, y el
+  resultado. Con 8 personas, notificar cada adelantamiento sería insufrible.
+
+**Cómo probarlo sin una segunda persona**: se puede suplantar a otro usuario
+con el mismo `set_config` de más arriba, cambiando el correo. Sirve para
+validar aforo, códigos y la clasificación con varios, aunque no sustituye a
+probarlo de verdad con otro móvil.
 
 ---
 

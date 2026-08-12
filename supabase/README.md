@@ -47,6 +47,7 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0034_achievements.sql` | Logros: métricas y fecha de desbloqueo |
 | `0035_battles.sql` | Batallas entre amigos: tablas y marcador. Ver `BATALLAS.md` |
 | `0036_battle_target_blend.sql` | Corrige el objetivo de la batalla: mezcla lo declarado con lo real |
+| `0037_battle_join.sql` | Batallas: unirse por código, previsualizar, salir y caducar |
 
 ### Archivos que no forman parte de la instalación
 
