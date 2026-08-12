@@ -67,6 +67,17 @@ export function BattleInfoSheet({ visible, onClose }: Props) {
             quien más peso levante.
           </Text>
 
+          {/* Lo práctico primero: quien abre esto sin haber creado ninguna
+              batalla necesita saber cómo se juega, no la filosofía. La
+              puntuación va después, que es lo que se viene a mirar cuando ya
+              hay una en marcha y no se entiende el marcador. */}
+          <Section title="Cómo se juega">
+            <Bullet text="Creas una batalla y compartes su código de 6 caracteres." />
+            <Bullet text="Hasta 8 personas, y solo una batalla a la vez." />
+            <Bullet text="Al empezar se cierra la entrada: nadie se suma a mitad." />
+            <Bullet text="Cuando termina el plazo se cierra sola y se avisa a todos." />
+          </Section>
+
           <Section title="Por qué no se comparan los kilos">
             <Text style={styles.text}>
               Comparar pesos entre personas compara biología, no esfuerzo:
@@ -89,10 +100,18 @@ export function BattleInfoSheet({ visible, onClose }: Props) {
             <Rule
               points="50"
               label="Cada marca personal"
-              detail="Superar tu mejor peso en un ejercicio. Máximo 300."
+              detail="Superar el mejor peso que tenías ANTES de empezar la batalla, en cualquier ejercicio. Máximo 300."
             />
             <Rule points="75" label="Cada logro que desbloquees" />
-            <Rule points="15" label="Cada día que entrenas" />
+            <Rule
+              points="15"
+              label="Cada día que entrenas"
+              detail="Suma aparte de lo anterior a propósito: como cumplir tu plan topa en 1000, esto es lo único que premia pasarte de tu objetivo."
+            />
+            <Text style={styles.text}>
+              Si dos acabáis con los mismos puntos, queda por delante quien haya
+              hecho más sesiones.
+            </Text>
           </Section>
 
           <Section title="El ejemplo que lo explica todo">
@@ -114,6 +133,10 @@ export function BattleInfoSheet({ visible, onClose }: Props) {
               un fallo: ella cumplió su plan entero y tú te dejaste uno. Lo que
               se premia es la constancia con lo que cada uno se propone.
             </Text>
+            <Text style={styles.aside}>
+              Son solo los puntos por cumplir el plan. A los dos se les sumarían
+              además los días entrenados, las marcas y los logros.
+            </Text>
           </Section>
 
           <Section title="De dónde sale tu objetivo">
@@ -123,13 +146,6 @@ export function BattleInfoSheet({ visible, onClose }: Props) {
               empezar la batalla y ya no cambia, así que tocar el perfil a mitad
               no sirve de nada.
             </Text>
-          </Section>
-
-          <Section title="Cómo se juega">
-            <Bullet text="Creas una batalla y compartes su código de 6 caracteres." />
-            <Bullet text="Hasta 8 personas, y solo una batalla a la vez." />
-            <Bullet text="Al empezar se cierra la entrada: nadie se suma a mitad." />
-            <Bullet text="Cuando termina el plazo se cierra sola y se avisa a todos." />
           </Section>
 
           <Section title="Qué ven los demás">
@@ -268,6 +284,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: HomeColors.textSecondary,
+  },
+
+  // La letra pequeña del ejemplo: matiza sin competir con la explicación.
+  aside: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: HomeColors.textTertiary,
   },
 
   rule: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
