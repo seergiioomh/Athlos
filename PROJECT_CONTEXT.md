@@ -41,6 +41,21 @@ Cuatro cosas que conviene saber antes de tocar nada:
    Supabase. Que un archivo esté en el repositorio no significa que su SQL se
    haya ejecutado.
 
+   Se puede comprobar sin entrar al panel. Las funciones:
+
+   ```bash
+   npx supabase functions list --project-ref dcuvfhbqoteodzzldocc
+   ```
+
+   Y si una migración se aplicó, preguntando por una columna que solo ella
+   crea: `GET /rest/v1/<tabla>?select=<columna>&limit=1` con la clave anon. Si
+   existe devuelve `[]` aunque RLS tape las filas; si no, un error `42703`
+   diciendo que la columna no existe.
+
+   **Con funciones RPC esto no vale**: PostgREST responde 404 tanto si no
+   existe como si simplemente no la expone, así que da falsos negativos con
+   funciones que sí están aplicadas.
+
 ---
 
 ## Qué es
@@ -100,8 +115,8 @@ amigos · compartir un entrenamiento por enlace · recordatorios push.
 | Supabase, *Redirect URLs* | `athlos://confirm` y `athlos://reset-password` |
 | Supabase, SMTP | El de serie. Pocos correos por hora y **plantillas no editables** |
 | Supabase, registros | Permitidos |
-| Supabase, migraciones | Aplicadas hasta `0034`. La `0035` (batallas) **está sin ejecutar** |
-| Supabase, funciones | Cuatro desplegadas. `close-battles` **sin desplegar** |
+| Supabase, migraciones | Aplicadas hasta `0043` (verificado el 12 de agosto) |
+| Supabase, funciones | Cinco activas: las tres de IA, `send-reminders` y `close-battles` |
 | Supabase, extensiones | `pg_cron` y `pg_net` activas, cron `enviar-recordatorios` cada hora |
 | Supabase, secretos | `ANTHROPIC_API_KEY` y `CRON_SECRET` |
 | EAS, variables | Correctas en `production`, `preview` y `development` |
@@ -124,9 +139,9 @@ amigos · compartir un entrenamiento por enlace · recordatorios push.
   entitlement `associatedDomains`. Aplazado a conciencia.
 - Borrar la rama `master` del remoto, que quedó duplicada.
 - No hay tests. Se comprueba con `tsc --noEmit` y `expo lint`.
-- **Batallas**: los tres pasos están escritos, pero faltan por hacer en
-  Supabase el despliegue de `close-battles` y su cron. Y sin una segunda
-  cuenta real no se ha probado con más de una persona. Ver `BATALLAS.md`.
+- **Batallas**: funcionan de punta a punta con una cuenta. Sin una segunda
+  cuenta real no se ha probado el aforo, la sala de espera con varios ni la
+  clasificación con más de una persona. Ver `BATALLAS.md`.
 
 Ya resuelto, por si aparece en el historial y confunde: la contraseña de la
 base de datos se cambió, `EXPO_PUBLIC_DEV_USER_ID` se borró de EAS, el caché
@@ -194,6 +209,23 @@ Tocar un día ya entrenado abre lo que se hizo ese día.
 **Entrenamiento.** Separa dos cosas que la gente confunde: los **objetivos
 sugeridos** por la IA (series, descanso, peso recomendado) que no se editan, y
 las **series registradas** por el usuario, que son lo que de verdad hizo.
+
+La pantalla se rediseñó porque el objetivo se decía **tres veces**: en una
+tarjeta de métricas, otra vez en una columna de cada fila y una tercera dentro
+de los campos. Con eso no cabían cinco columnas en un móvil y los campos
+quedaban por debajo del tamaño con el que se acierta con el dedo. Ahora se dice
+una vez, en la línea bajo el nombre del ejercicio.
+
+Tres cosas de esa pantalla que ya costaron una vuelta:
+
+- **El campo tiene que ser el `TextInput` entero.** Estuvo metido dentro de una
+  caja con la unidad al lado, y solo eran tocables sus 34 px centrales: parecía
+  un campo y no lo era.
+- **El cronómetro de descanso va DEBAJO de las series.** Puesto entre la
+  cabecera y la lista, marcar una serie empujaba hacia abajo justo lo que el
+  usuario estaba mirando.
+- **El descanso no se escribe en ningún sitio.** El cronómetro salta solo, así
+  que anunciarlo era decir dos veces lo que la pantalla ya hace.
 
 El objetivo puede ser **distinto en cada serie**: `plan_exercises.set_targets`
 guarda una progresión (ascendente, back-off, descendente) cuando la IA la

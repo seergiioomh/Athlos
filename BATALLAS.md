@@ -4,7 +4,8 @@ Competición entre amigos por constancia. Documento vivo: recoge el diseño
 completo, **por qué** cada decisión es como es, y en qué paso va la
 implementación. Si retomas esto sin contexto previo, empieza aquí.
 
-Última actualización: **11 de agosto de 2026**.
+Última actualización: **12 de agosto de 2026**. Los tres pasos están hechos
+y funcionando; queda probarlo con una segunda persona real.
 
 ---
 
@@ -279,6 +280,9 @@ cerradas por el cron. Estos logros miden participación y constancia competitiva
 no peso, volumen ni información de rivales.
 
 ### Puesta en marcha del paso 3
+
+Hecho: `close-battles` está desplegada y las migraciones aplicadas. Se deja
+escrito por si hay que rehacerlo en otro proyecto.
 
 ```bash
 npx supabase functions deploy close-battles --use-api --no-verify-jwt
