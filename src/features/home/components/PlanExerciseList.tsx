@@ -8,11 +8,6 @@ interface Props {
   exercises: SuggestedExercise[];
 }
 
-const formatRest = (seconds: number) =>
-  seconds >= 60 && seconds % 60 === 0
-    ? `${seconds / 60} min`
-    : `${seconds} s`;
-
 /**
  * La lista de ejercicios de un plan, con sus objetivos.
  *
@@ -35,12 +30,9 @@ export function PlanExerciseList({ exercises }: Props) {
 
             <View style={styles.metrics}>
               {/* Un solo texto para series, reps y peso: con progresión no se
-                  puede partir en trozos sin mentir. */}
+                  puede partir en trozos sin mentir. Sin el descanso, que lo
+                  lleva el cronómetro al entrenar. */}
               <Text style={styles.metric}>{targetSummary(exercise)}</Text>
-              <Text style={styles.separator}>·</Text>
-              <Text style={styles.metric}>
-                {formatRest(exercise.restSeconds)} descanso
-              </Text>
             </View>
 
             {exercise.aiNote ? (
@@ -96,8 +88,6 @@ const styles = StyleSheet.create({
     color: HomeColors.text,
     fontVariant: ["tabular-nums"],
   },
-
-  separator: { fontSize: 13, color: HomeColors.textSecondary },
 
   /**
    * La nota del entrenador iba en lima a plena saturación. Como distintivo
