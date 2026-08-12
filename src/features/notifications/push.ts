@@ -48,6 +48,7 @@ export function usePushNotifications() {
         const screen = respuesta.notification.request.content.data?.screen;
 
         if (screen === "workout") router.push("/(tabs)/workout");
+        if (screen === "battles") router.push("/batallas");
       }
     );
 

@@ -3,7 +3,8 @@
 Supabase (Postgres + Edge Functions). El entrenamiento sugerido, el ciclo de
 entrenamiento y el chat del coach los genera Claude desde Edge Functions, para
 que la clave de Anthropic no viaje nunca dentro de la app. Una cuarta función
-manda los recordatorios push, y a esa la llama un cron, no la app.
+manda los recordatorios push y una quinta cierra las batallas vencidas; a
+esas dos las llama un cron, no la app.
 
 ## Puesta en marcha
 
@@ -48,6 +49,7 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0035_battles.sql` | Batallas entre amigos: tablas y marcador. Ver `BATALLAS.md` |
 | `0036_battle_target_blend.sql` | Corrige el objetivo de la batalla: mezcla lo declarado con lo real |
 | `0037_battle_join.sql` | Batallas: unirse por código, previsualizar, salir y caducar |
+| `0038_battle_close.sql` | Batallas: cierre automático y ganador |
 
 ### Archivos que no forman parte de la instalación
 

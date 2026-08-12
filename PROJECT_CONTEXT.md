@@ -65,8 +65,8 @@ Acceso y registro · bienvenida en 7 pasos · inicio con el entrenamiento del d�
 · pantalla de entrenamiento con objetivos y registro de series · pantalla de
 fin de entrenamiento con resumen y sensaciones · chat con el coach y propuestas
 aplicables · progreso con peso, actividad comparada y marcas por grupo · perfil
-· ciclo de entrenamiento · pantalla de rachas · logros · compartir un
-entrenamiento por enlace · recordatorios push.
+· ciclo de entrenamiento · pantalla de rachas · logros · batallas entre
+amigos · compartir un entrenamiento por enlace · recordatorios push.
 
 ### Configuración viva
 
@@ -78,7 +78,7 @@ entrenamiento por enlace · recordatorios push.
 | Supabase, SMTP | El de serie. Pocos correos por hora y **plantillas no editables** |
 | Supabase, registros | Permitidos |
 | Supabase, migraciones | Aplicadas hasta `0034`. La `0035` (batallas) **está sin ejecutar** |
-| Supabase, funciones | Cuatro desplegadas |
+| Supabase, funciones | Cuatro desplegadas. `close-battles` **sin desplegar** |
 | Supabase, extensiones | `pg_cron` y `pg_net` activas, cron `enviar-recordatorios` cada hora |
 | Supabase, secretos | `ANTHROPIC_API_KEY` y `CRON_SECRET` |
 | EAS, variables | Correctas en `production`, `preview` y `development` |
@@ -101,9 +101,9 @@ entrenamiento por enlace · recordatorios push.
   entitlement `associatedDomains`. Aplazado a conciencia.
 - Borrar la rama `master` del remoto, que quedó duplicada.
 - No hay tests. Se comprueba con `tsc --noEmit` y `expo lint`.
-- **Batallas a medio hacer**: los pasos 1 y 2 (todo el SQL) están hechos; el
-  paso 3 —pantallas, tarjeta de Inicio y cierre por cron— no. Todo el contexto
-  en `BATALLAS.md`.
+- **Batallas**: los tres pasos están escritos, pero faltan por hacer en
+  Supabase el despliegue de `close-battles` y su cron. Y sin una segunda
+  cuenta real no se ha probado con más de una persona. Ver `BATALLAS.md`.
 
 Ya resuelto, por si aparece en el historial y confunde: la contraseña de la
 base de datos se cambió, `EXPO_PUBLIC_DEV_USER_ID` se borró de EAS, el caché
@@ -125,6 +125,7 @@ app/                     rutas (expo-router, enrutado por archivos)
   weekly-plan.tsx        ciclo de entrenamiento, encima de las pestañas
   rachas.tsx             detalle de la racha, encima de las pestañas
   logros.tsx             la vitrina de logros, encima de las pestañas
+  batallas.tsx           batalla: sala, clasificación y resultado
   shared-workout.tsx     entrenamiento recibido por enlace (exige sesión)
 
 src/
@@ -137,7 +138,7 @@ src/
 
 supabase/
   migrations/            SQL numerado, se ejecuta a mano en el panel
-  functions/             cuatro Edge Functions (Deno)
+  functions/             cinco Edge Functions (Deno)
   imports/               entrenamientos importados de las notas en papel
 ```
 

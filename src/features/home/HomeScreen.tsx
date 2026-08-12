@@ -12,6 +12,7 @@ import { useLatestPlan } from "@/features/workout/queries";
 import { CoachInsightCard } from "./components/CoachInsightCard";
 import { PastWorkoutSheet } from "./components/PastWorkoutSheet";
 import { TodayWorkoutCard } from "./components/TodayWorkoutCard";
+import { BattleCard } from "./components/BattleCard";
 import { WorkoutHistory } from "./components/WorkoutHistory";
 import { HomeColors } from "./home-theme";
 import { levelFromStats } from "./level";
@@ -99,6 +100,11 @@ export function HomeScreen() {
         plan={plan && !plan.completedAt ? plan : null}
         onPress={() => router.push("/(tabs)/workout")}
       />
+
+      {/* Debajo del entrenamiento y encima del historial: importa a diario
+          mientras dura, pero nunca por encima de lo que toca hoy. Se pinta
+          sola solo si hay una batalla activa. */}
+      <BattleCard onPress={() => router.push("/batallas")} />
 
       <WorkoutHistory
         sessions={sessions ?? []}

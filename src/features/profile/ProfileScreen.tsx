@@ -3,6 +3,7 @@ import {
   Calendar03Icon,
   ChampionIcon,
   PencilEdit02Icon,
+  Sword01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import Constants from "expo-constants";
@@ -23,6 +24,7 @@ import { StreakBadge } from "@/components/ui/StreakBadge";
 import { signOut, useSession } from "@/features/auth/session";
 import { ACHIEVEMENTS, earnedSlugs } from "@/features/achievements/definitions";
 import { useAchievementMetrics } from "@/features/achievements/queries";
+import { useCurrentBattle } from "@/features/battles/queries";
 import { HomeColors } from "@/features/home/home-theme";
 import { EXP_PER_LEVEL, levelFromStats } from "@/features/home/level";
 import { useProfile } from "@/features/onboarding/queries";
@@ -112,6 +114,7 @@ export function ProfileScreen() {
   const { data: streak, error: streakError } = useStreak();
   const { data: split } = useActiveCycle();
   const { data: achievementMetrics } = useAchievementMetrics();
+  const { data: battle } = useCurrentBattle();
   const { email } = useSession();
   const update = useUpdateProfile();
   const remove = useDeleteAccount();
@@ -288,6 +291,39 @@ export function ProfileScreen() {
               {achievementMetrics
                 ? `${earnedSlugs(achievementMetrics).length} de ${ACHIEVEMENTS.length} conseguidos`
                 : "Momentos que solo se consiguen una vez"}
+            </Text>
+          </View>
+
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            size={18}
+            color={HomeColors.textSecondary}
+            strokeWidth={2}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push("/batallas")}
+          style={styles.planButton}
+        >
+          <View style={styles.planIcon}>
+            <HugeiconsIcon
+              icon={Sword01Icon}
+              size={19}
+              color={HomeColors.primary}
+              strokeWidth={2}
+            />
+          </View>
+
+          <View style={styles.planText}>
+            <Text style={styles.planTitle}>Batallas</Text>
+            <Text style={styles.planSubtitle}>
+              {battle?.status === "active"
+                ? battle.name
+                : battle?.status === "lobby"
+                  ? `${battle.name} · sin empezar`
+                  : "Compite con tus amigos por constancia"}
             </Text>
           </View>
 

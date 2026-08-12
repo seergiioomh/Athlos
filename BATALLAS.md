@@ -224,28 +224,73 @@ Dos detalles que no son adorno:
   llama porque la invoca el cron, así que se le revoca el permiso a `anon` y
   `authenticated`.
 
-### Paso 3 — Pantallas y avisos ⬜ PENDIENTE
+### Paso 3 — Pantallas y avisos ✅ HECHO
 
-Todo el SQL está listo; falta la app y el cierre automático.
+`0038_battle_close.sql`, la función `close-battles` y todo
+`src/features/battles/`.
 
-- **Capa de datos**: `src/services/battles.ts` y
-  `src/features/battles/queries.ts`, siguiendo el patrón del resto (pantalla →
-  queries → services, nunca `supabase` desde un componente).
-- **Pantallas**: crear batalla, sala de espera con el código, clasificación en
-  vivo y resultado. Entrada desde Perfil, junto a Logros.
-- **Tarjeta en Inicio** mientras está activa, con días restantes. Es lo urgente
-  y merece estar donde se mira todos los días.
-- **Cierre por cron**: falta una función que cierre las batallas vencidas,
-  calcule el ganador (`winner_id`) y avise. Puede colgar del cron horario que
-  ya existe para los recordatorios, llamando también a
-  `expire_stale_lobbies()`.
-- **Avisos, solo 3 momentos**: al empezar, a mitad si vas fuera del podio, y el
-  resultado. Con 8 personas, notificar cada adelantamiento sería insufrible.
+**SQL.** `battle_score` comprobaba que quien llama participa, y el cron no es
+nadie —no hay `auth.uid()`—, así que no podía usarla para saber quién ganó.
+En vez de duplicar la fórmula (que acabaría divergiendo a la primera de
+cambio), se parte en dos: `battle_ranking` tiene el cálculo y no pregunta quién
+llama, y `battle_score` se queda como la puerta que sí lo pregunta. Una sola
+fórmula, dos maneras de entrar. `battle_ranking` está revocada para los roles
+del cliente: tal cual dejaría leer el marcador de una batalla ajena sabiendo
+su id.
 
-**Cómo probarlo sin una segunda persona**: se puede suplantar a otro usuario
-con el mismo `set_config` de más arriba, cambiando el correo. Sirve para
-validar aforo, códigos y la clasificación con varios, aunque no sustituye a
-probarlo de verdad con otro móvil.
+`close_due_battles()` usa `for update skip locked` para que dos pasadas
+solapadas del cron no se peleen por la misma fila.
+
+**App.** Una sola pantalla (`BattlesScreen`) con cuatro estados —sin batalla,
+sala de espera, en curso y resultado—, como hace `WorkoutScreen`. Cuatro
+pantallas separadas para un flujo lineal solo añaden navegación.
+
+La tarjeta de Inicio aparece **solo mientras está activa**: es información con
+fecha de caducidad, y la sala de espera o el resultado no se miran a diario.
+
+No se usa `expo-clipboard` para el botón de copiar el código. Es un módulo
+nativo: añadirlo cambia la huella y obliga a recompilar la app entera por un
+botón. El menú de compartir del sistema ya trae "Copiar", y el código es texto
+seleccionable.
+
+**Avisos.** Al cerrar una batalla se notifica a todos, distinguiendo a quien
+gana. Falta el aviso de mitad de batalla si vas fuera del podio; se decidió no
+notificar cada adelantamiento porque con 8 personas sería insufrible.
+
+### Puesta en marcha del paso 3
+
+```bash
+npx supabase functions deploy close-battles --use-api --no-verify-jwt
+```
+
+Y el cron, en el editor SQL, con el mismo `CRON_SECRET` que `send-reminders`:
+
+```sql
+select cron.schedule(
+  'cerrar-batallas',
+  '5 * * * *',
+  $$
+  select net.http_post(
+    url := 'https://dcuvfhbqoteodzzldocc.supabase.co/functions/v1/close-battles',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-cron-secret', 'EL_MISMO_SECRETO'
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+En el minuto 5 y no en el 0 para no solaparse con los recordatorios.
+
+---
+
+## Cómo probarlo sin una segunda persona
+
+Suplantando a otro usuario con el `set_config` de más arriba, cambiando el
+correo. Sirve para validar aforo, códigos y que la clasificación ordena bien
+con varios, aunque no sustituye a probarlo con otro móvil de verdad.
 
 ---
 
