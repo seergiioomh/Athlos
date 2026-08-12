@@ -147,16 +147,34 @@ Lo que hay:
 | `battle_score(id)` | La clasificación con su desglose |
 | `is_battle_participant(id, user)` | Solo para las políticas RLS. Ver *la trampa de la recursión* |
 
-**Cómo probarlo** (editor SQL, con tu sesión):
+**Cómo probarlo.** Ojo: el editor SQL de Supabase corre como rol `postgres`
+**sin JWT**, así que `auth.uid()` es NULL y todas estas funciones responden
+"Sesión no válida". No es un fallo, es la protección haciendo su trabajo. Hay
+que suplantar al usuario primero:
 
 ```sql
-select public.create_battle('Prueba', 7);
-select public.start_battle('<id devuelto>');
-select * from public.battle_score('<id devuelto>');
+select set_config(
+  'request.jwt.claims',
+  json_build_object('sub', (select id from auth.users where email = 'TU_CORREO'))::text,
+  false
+);
+
+select public.create_battle('Reto de prueba', 7) as battle_id;
 ```
 
+Y con el id devuelto, **en la misma pestaña** (la suplantación vive en esa
+conexión):
+
+```sql
+select public.start_battle('<id>');
+select * from public.battle_score('<id>');
+```
+
+El primer parámetro de `create_battle` es el **nombre de la batalla**, no un
+correo: a nadie se le invita aquí, eso es el paso 2.
+
 Entrena, vuelve a llamar a `battle_score` y comprueba que los puntos suben como
-dice la fórmula.
+dice la fórmula. Ese es el objetivo real del paso 1.
 
 ### Paso 2 — Unirse: código, sala de espera y acceso entre cuentas ⬜ PENDIENTE
 
