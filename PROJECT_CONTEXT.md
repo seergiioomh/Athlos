@@ -139,9 +139,6 @@ amigos · compartir un entrenamiento por enlace · recordatorios push.
   entitlement `associatedDomains`. Aplazado a conciencia.
 - Borrar la rama `master` del remoto, que quedó duplicada.
 - No hay tests. Se comprueba con `tsc --noEmit` y `expo lint`.
-- **Batallas**: funcionan de punta a punta con una cuenta. Sin una segunda
-  cuenta real no se ha probado el aforo, la sala de espera con varios ni la
-  clasificación con más de una persona. Ver `BATALLAS.md`.
 
 Ya resuelto, por si aparece en el historial y confunde: la contraseña de la
 base de datos se cambió, `EXPO_PUBLIC_DEV_USER_ID` se borró de EAS, el caché

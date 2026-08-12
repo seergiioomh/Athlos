@@ -29,6 +29,12 @@ export const Colors = {
   pinkSoft: "rgba(255,55,95,0.16)",
   purple: "#BF5AF2",
   purpleSoft: "rgba(191,90,242,0.16)",
+  /**
+   * Violeta más presente, para cuando una tarjeta entera es del coach y no
+   * solo lleva un detalle suyo. `purpleSoft` a ese tamaño se queda en un gris
+   * con matiz y no se lee como color.
+   */
+  purpleTinted: "rgba(191,90,242,0.24)",
   blue: "#0A84FF",
   blueSoft: "rgba(10,132,255,0.16)",
   orange: "#FF9F0A",

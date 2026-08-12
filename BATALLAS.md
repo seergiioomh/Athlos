@@ -4,8 +4,8 @@ Competición entre amigos por constancia. Documento vivo: recoge el diseño
 completo, **por qué** cada decisión es como es, y en qué paso va la
 implementación. Si retomas esto sin contexto previo, empieza aquí.
 
-Última actualización: **12 de agosto de 2026**. Los tres pasos están hechos
-y funcionando; queda probarlo con una segunda persona real.
+Última actualización: **12 de agosto de 2026**. Los tres pasos están hechos,
+desplegados y probados con varias cuentas.
 
 ---
 
@@ -319,11 +319,10 @@ con varios, aunque no sustituye a probarlo con otro móvil de verdad.
 
 ---
 
-## Lo que bloquea de verdad
+## Lo que queda
 
-**Hace falta al menos otra cuenta real.** El paso 1 se prueba en solitario, pero
-los pasos 2 y 3 no tienen sentido sin alguien más, y las pruebas externas de
-TestFlight siguen sin configurar: eso exige pasar la Beta App Review y tener
-política de privacidad.
+Nada del diseño: está entero, desplegado y probado con varias cuentas.
 
-No es un problema de código, pero para el paso 2 conviene tenerlo resuelto.
+Lo único pendiente es **repartirlo a gente de fuera**, y eso no es código: las
+pruebas externas de TestFlight exigen pasar la Beta App Review y tener política
+de privacidad, que la app todavía no tiene.
