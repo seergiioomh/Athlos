@@ -31,11 +31,21 @@ const formatWeight = (kg: number) =>
   kg === 0 ? "corporal" : `${String(kg).replace(".", ",")} kg`;
 
 /**
+ * A partir de cuántas series se deja de enumerar la progresión.
+ *
+ * Con cuatro pares aún se lee de un vistazo; con seis es una parrafada que
+ * nadie procesa antes de empezar a entrenar. Los números siguen estando en
+ * cada fila, así que no se pierde nada por no repetirlos aquí.
+ */
+const MAX_PARES = 4;
+
+/**
  * El objetivo en una línea.
  *
- * Con progresión no se puede resumir en "4 × 10 · 60 kg" sin mentir, así que
- * se enumeran los pesos: "12 → 10 → 8 reps · 60 → 70 → 80 kg". Si la lista se
- * hace larga, la pantalla enseña el objetivo serie a serie y esto no se usa.
+ * Con progresión se enumeran PARES —"60×12 · 70×10 · 80×8"—, que es como se
+ * escribe en el gimnasio. La primera versión sacaba dos listas separadas,
+ * "12 → 10 → 8 · 60 → 70 → 80 kg", y obligaba a emparejarlas mentalmente para
+ * entender que el 12 iba con el 60. Nadie hace eso.
  */
 export function targetSummary(exercise: ConObjetivo): string {
   if (!isProgressive(exercise)) {
@@ -46,20 +56,16 @@ export function targetSummary(exercise: ConObjetivo): string {
   }
 
   const targets = targetsOf(exercise);
-  const mismoPeso = targets.every(
-    (target) => target.weightKg === targets[0].weightKg
-  );
-  const mismasReps = targets.every(
-    (target) => target.reps === targets[0].reps
-  );
 
-  const reps = mismasReps
-    ? `${exercise.sets} × ${targets[0].reps}`
-    : targets.map((target) => target.reps).join(" → ");
+  if (targets.length > MAX_PARES) {
+    return `${exercise.sets} series · progresión`;
+  }
 
-  const peso = mismoPeso
-    ? formatWeight(targets[0].weightKg)
-    : `${targets.map((target) => target.weightKg).join(" → ")} kg`;
-
-  return `${reps} · ${peso}`;
+  return targets
+    .map((target) =>
+      target.weightKg === 0
+        ? `${target.reps} reps`
+        : `${String(target.weightKg).replace(".", ",")}×${target.reps}`
+    )
+    .join(" · ");
 }

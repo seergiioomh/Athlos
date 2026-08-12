@@ -46,9 +46,10 @@ const sanitizeReps = (value: string) => value.replace(/[^0-9]/g, "");
  * Las unidades van en la cabecera y no en cada fila: repetir "kg" y "reps"
  * cuatro veces le quitaba ancho justo a lo que hay que tocar.
  *
- * Todo dentro de una tarjeta con separadores finos, no una por serie: son
- * cuatro filas de lo mismo, y darle marco propio a cada una las presentaba
- * como cuatro bloques sin relación.
+ * Todo dentro de una sola tarjeta, no una por serie: son cuatro filas de lo
+ * mismo, y darle marco propio a cada una las presentaba como bloques sin
+ * relación. Sin separadores entre ellas: los propios campos ya marcan dónde
+ * empieza cada fila.
  */
 export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
   // Una entrada por serie, lleve progresión o no: así la fila 3 sugiere lo
@@ -64,14 +65,11 @@ export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
         <View style={styles.columnCheck} />
       </View>
 
-      {sets.map((set, index) => {
+      {sets.map((set) => {
         const target = targets[set.number - 1] ?? targets[0];
 
         return (
-          <View
-            key={set.number}
-            style={[styles.row, index > 0 && styles.rowDivided]}
-          >
+          <View key={set.number} style={styles.row}>
             <Text style={styles.number}>{set.number}</Text>
 
             {/* El `TextInput` ocupa el recuadro entero. Antes iba dentro de una
@@ -163,11 +161,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     paddingVertical: 8,
-  },
-
-  rowDivided: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HomeColors.border,
   },
 
   number: {
