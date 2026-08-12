@@ -42,65 +42,54 @@ const sanitizeReps = (value: string) => value.replace(/[^0-9]/g, "");
  * objetivo, que ya se dice arriba y es igual para todas, las que quedan
  * respiran.
  *
- * La serie en curso —la primera sin marcar— va destacada y las siguientes
- * atenuadas: dice por dónde vas sin tener que leer un contador.
+ * Las unidades van en la cabecera y no en cada fila: repetir "kg" y "reps"
+ * cuatro veces le quitaba ancho justo a lo que hay que tocar.
  */
 export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
-  const actual = sets.find((set) => !set.done)?.number;
-
   return (
     <View style={styles.list}>
+      <View style={styles.columns}>
+        <Text style={styles.columnNumber}>#</Text>
+        <Text style={styles.columnLabel}>KG</Text>
+        <Text style={styles.columnLabel}>REPS</Text>
+        <View style={styles.columnCheck} />
+      </View>
+
       {sets.map((set) => {
-        const esActual = set.number === actual;
-        // Pendiente y no es la de ahora: se aparta sin desaparecer.
-        const porVenir = !set.done && !esActual;
-
         return (
-          <View
-            key={set.number}
-            style={[
-              styles.row,
-              esActual && styles.rowCurrent,
-              porVenir && styles.rowPending,
-            ]}
-          >
-            <Text style={[styles.number, esActual && styles.numberCurrent]}>
-              {set.number}
-            </Text>
+          <View key={set.number} style={styles.row}>
+            <Text style={styles.number}>{set.number}</Text>
 
-            <View style={styles.field}>
-              <TextInput
-                style={styles.input}
-                value={set.weightKg}
-                onChangeText={(value) =>
-                  onChange(set.number, "weightKg", sanitizeWeight(value))
-                }
-                placeholder={String(exercise.targetWeightKg)}
-                placeholderTextColor={HomeColors.textTertiary}
-                keyboardType="decimal-pad"
-                selectTextOnFocus
-                maxLength={6}
-                accessibilityLabel={`Peso de la serie ${set.number}`}
-              />
-              <Text style={styles.unit}>kg</Text>
-            </View>
+            {/* El `TextInput` ocupa el recuadro entero. Antes iba dentro de una
+                caja con la unidad al lado y solo eran tocables sus 34 px: el
+                recuadro parecía un campo y no lo era. */}
+            <TextInput
+              style={styles.input}
+              value={set.weightKg}
+              onChangeText={(value) =>
+                onChange(set.number, "weightKg", sanitizeWeight(value))
+              }
+              placeholder={String(exercise.targetWeightKg)}
+              placeholderTextColor={HomeColors.textTertiary}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+              maxLength={6}
+              accessibilityLabel={`Peso de la serie ${set.number}`}
+            />
 
-            <View style={styles.field}>
-              <TextInput
-                style={styles.input}
-                value={set.reps}
-                onChangeText={(value) =>
-                  onChange(set.number, "reps", sanitizeReps(value))
-                }
-                placeholder={String(exercise.targetReps)}
-                placeholderTextColor={HomeColors.textTertiary}
-                keyboardType="number-pad"
-                selectTextOnFocus
-                maxLength={3}
-                accessibilityLabel={`Repeticiones de la serie ${set.number}`}
-              />
-              <Text style={styles.unit}>reps</Text>
-            </View>
+            <TextInput
+              style={styles.input}
+              value={set.reps}
+              onChangeText={(value) =>
+                onChange(set.number, "reps", sanitizeReps(value))
+              }
+              placeholder={String(exercise.targetReps)}
+              placeholderTextColor={HomeColors.textTertiary}
+              keyboardType="number-pad"
+              selectTextOnFocus
+              maxLength={3}
+              accessibilityLabel={`Repeticiones de la serie ${set.number}`}
+            />
 
             <TouchableOpacity
               activeOpacity={0.8}
@@ -129,58 +118,56 @@ export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
 const styles = StyleSheet.create({
   list: { gap: 8 },
 
+  columns: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    marginBottom: 2,
+  },
+
+  columnNumber: { width: 20 },
+
+  columnLabel: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: HomeColors.textTertiary,
+  },
+
+  columnCheck: { width: 32 },
+
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingVertical: 11,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 16,
     backgroundColor: HomeColors.surface,
-    borderWidth: 1,
-    borderColor: "transparent",
   },
-
-  rowCurrent: {
-    backgroundColor: HomeColors.primarySoft,
-    borderColor: "rgba(198,244,50,0.3)",
-  },
-
-  rowPending: { opacity: 0.55 },
 
   number: {
     width: 20,
     fontSize: 14,
     fontWeight: "700",
-    color: HomeColors.text,
+    color: HomeColors.textSecondary,
     fontVariant: ["tabular-nums"],
   },
 
-  numberCurrent: { color: HomeColors.primary },
-
-  field: {
+  input: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
+    height: 42,
+    textAlign: "center",
     borderRadius: 12,
     backgroundColor: HomeColors.surfaceElevated,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-  },
-
-  input: {
-    minWidth: 34,
-    textAlign: "center",
     fontSize: 16,
     fontWeight: "600",
     color: HomeColors.text,
     fontVariant: ["tabular-nums"],
-    padding: 0,
   },
-
-  unit: { fontSize: 11, color: HomeColors.textSecondary },
 
   // 32 px es el mínimo con el que se acierta entre serie y serie; antes eran 26.
   check: {

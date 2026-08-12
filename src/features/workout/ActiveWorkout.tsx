@@ -74,21 +74,26 @@ export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
 
         <ExerciseHeading exercise={session.exercise} />
 
-        {session.resting && (
-          <RestTimer
-            secondsLeft={session.restLeft}
-            totalSeconds={session.exercise.restSeconds}
-            onAdd={session.addRest}
-            onSkip={session.skipRest}
-          />
-        )}
-
         <SetLogCard
           exercise={session.exercise}
           sets={session.sets}
           onChange={session.updateSet}
           onToggle={session.toggleSet}
         />
+
+        {/* Debajo de las series, no encima: apareciendo entre la cabecera y
+            la lista, marcar una serie empujaba hacia abajo justo lo que el
+            usuario estaba mirando. Aquí crece por debajo y nada se mueve. */}
+        {session.resting && (
+          <View style={styles.rest}>
+            <RestTimer
+              secondsLeft={session.restLeft}
+              totalSeconds={session.exercise.restSeconds}
+              onAdd={session.addRest}
+              onSkip={session.skipRest}
+            />
+          </View>
+        )}
 
         {session.syncError && (
           <View style={styles.banner}>
@@ -160,6 +165,8 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: HomeColors.errorText,
   },
+
+  rest: { marginTop: 14 },
 
   next: {
     marginTop: 14,
