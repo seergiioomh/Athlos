@@ -53,6 +53,7 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0039_battle_lobby_participants.sql` | Participantes de sala de espera, sin abrir perfiles |
 | `0040_ai_usage_limits.sql` | Límite diario por usuario para las funciones de IA |
 | `0041_battle_achievements.sql` | Métricas y logros de participación y victoria en Batallas |
+| `0042_battle_start_notice.sql` | Batallas: aviso a los participantes al empezar |
 
 ### Archivos que no forman parte de la instalación
 
