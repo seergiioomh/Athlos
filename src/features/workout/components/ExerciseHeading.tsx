@@ -8,9 +8,6 @@ interface Props {
   exercise: SuggestedExercise;
 }
 
-const formatRest = (seconds: number) =>
-  seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`;
-
 /**
  * El ejercicio y su objetivo, en dos líneas.
  *
@@ -22,13 +19,10 @@ const formatRest = (seconds: number) =>
  * los pesos y cada fila sugiere el suyo en su propio campo.
  */
 export function ExerciseHeading({ exercise }: Props) {
-  // Con progresión el resumen enumera los pesos en vez de dar uno solo, que
-  // sería mentira. Lo resuelve `targetSummary`, compartido con las demás
-  // pantallas para que todas digan lo mismo.
-  const objetivo = [
-    targetSummary(exercise),
-    `${formatRest(exercise.restSeconds)} descanso`,
-  ].join(" · ");
+  // Sin el descanso: el cronómetro salta solo al marcar una serie, así que
+  // anunciarlo aquí es decir dos veces lo que la pantalla ya hace por su
+  // cuenta. Con progresión, `targetSummary` enumera los pares.
+  const objetivo = targetSummary(exercise);
 
   return (
     <View style={styles.container}>
