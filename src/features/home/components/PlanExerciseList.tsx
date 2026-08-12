@@ -1,14 +1,12 @@
 import { StyleSheet, Text, View } from "react-native";
 
+import { targetSummary } from "@/features/workout/targets";
 import type { SuggestedExercise } from "@/features/workout/types";
 import { HomeColors } from "../home-theme";
 
 interface Props {
   exercises: SuggestedExercise[];
 }
-
-const formatWeight = (kg: number) =>
-  kg === 0 ? "Peso corporal" : `${String(kg).replace(".", ",")} kg`;
 
 const formatRest = (seconds: number) =>
   seconds >= 60 && seconds % 60 === 0
@@ -36,13 +34,9 @@ export function PlanExerciseList({ exercises }: Props) {
             <Text style={styles.muscle}>{exercise.muscleGroup}</Text>
 
             <View style={styles.metrics}>
-              <Text style={styles.metric}>
-                {exercise.sets} × {exercise.targetReps}
-              </Text>
-              <Text style={styles.separator}>·</Text>
-              <Text style={styles.metric}>
-                {formatWeight(exercise.targetWeightKg)}
-              </Text>
+              {/* Un solo texto para series, reps y peso: con progresión no se
+                  puede partir en trozos sin mentir. */}
+              <Text style={styles.metric}>{targetSummary(exercise)}</Text>
               <Text style={styles.separator}>·</Text>
               <Text style={styles.metric}>
                 {formatRest(exercise.restSeconds)} descanso

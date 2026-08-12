@@ -1,5 +1,6 @@
 import * as Linking from "expo-linking";
 
+import { isProgressive, targetsOf } from "./targets";
 import type { WorkoutPlan } from "./types";
 
 /**
@@ -18,6 +19,8 @@ export interface SharedWorkout {
     sets: number;
     targetReps: number;
     targetWeightKg: number;
+    /** Objetivo por serie si el ejercicio lleva progresión. */
+    setTargets: { reps: number; weightKg: number }[] | null;
     restSeconds: number;
   }[];
 }
@@ -43,8 +46,15 @@ interface Packed {
   t: string;
   f: string;
   b: string;
-  /** [slug, series, repeticiones, kg, descanso] */
-  e: [string, number, number, number, number][];
+  /**
+   * [slug, series, repeticiones, kg, descanso, progresión?]
+   *
+   * La progresión solo viaja si el ejercicio la lleva. Va como pares
+   * [repeticiones, kg] y va al final para que un enlace sin ella pese
+   * exactamente lo mismo que antes: la mayoría de ejercicios no la tienen y no
+   * hay motivo para alargarles el enlace.
+   */
+  e: [string, number, number, number, number, [number, number][]?][];
 }
 
 /** Límites de la base (ver 0001_workout_schema.sql). */
@@ -65,13 +75,25 @@ export function encodeWorkout(plan: WorkoutPlan, sharedBy: string): string {
     t: plan.title,
     f: plan.focus,
     b: sharedBy,
-    e: plan.exercises.map((exercise) => [
-      exercise.slug,
-      exercise.sets,
-      exercise.targetReps,
-      exercise.targetWeightKg,
-      exercise.restSeconds,
-    ]),
+    e: plan.exercises.map((exercise) => {
+      const base: [string, number, number, number, number] = [
+        exercise.slug,
+        exercise.sets,
+        exercise.targetReps,
+        exercise.targetWeightKg,
+        exercise.restSeconds,
+      ];
+
+      // Sin progresión, el enlace queda igual de corto que antes.
+      if (!isProgressive(exercise)) return base;
+
+      return [
+        ...base,
+        targetsOf(exercise).map(
+          (target) => [target.reps, target.weightKg] as [number, number]
+        ),
+      ];
+    }),
   };
 
   // `createURL` se encarga de codificar el parámetro y de poner el esquema
@@ -116,18 +138,32 @@ export function decodeWorkout(url: string): SharedWorkout | null {
   const exercises = packed.e.flatMap((entry) => {
     if (!Array.isArray(entry)) return [];
 
-    const [slug, sets, reps, weight, rest] = entry;
+    const [slug, sets, reps, weight, rest, progresion] = entry;
 
     // Sin slug no hay forma de saber qué ejercicio es, y ese sí que no se
     // puede recortar a un valor razonable.
     if (typeof slug !== "string" || !slug) return [];
 
+    const series = clamp(Math.round(Number(sets) || 1), LIMITS.sets);
+
+    // Igual que el resto: viene de fuera, así que se recorta a los límites de
+    // la base. Si no cuadra con el número de series se descarta entera y el
+    // ejercicio se queda uniforme, que es peor que el original pero utilizable.
+    const setTargets =
+      Array.isArray(progresion) && progresion.length === series
+        ? progresion.map((par) => ({
+            reps: clamp(Math.round(Number(par?.[0]) || 1), LIMITS.reps),
+            weightKg: clamp(Number(par?.[1]) || 0, LIMITS.weight),
+          }))
+        : null;
+
     return [
       {
         slug,
-        sets: clamp(Math.round(Number(sets) || 1), LIMITS.sets),
+        sets: series,
         targetReps: clamp(Math.round(Number(reps) || 1), LIMITS.reps),
         targetWeightKg: clamp(Number(weight) || 0, LIMITS.weight),
+        setTargets,
         restSeconds: clamp(Math.round(Number(rest) || 0), LIMITS.rest),
       },
     ];

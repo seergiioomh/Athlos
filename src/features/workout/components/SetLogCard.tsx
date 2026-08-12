@@ -9,6 +9,7 @@ import {
 } from "react-native";
 
 import { HomeColors } from "@/features/home/home-theme";
+import { targetsOf } from "../targets";
 import { SetEntry, SuggestedExercise } from "../types";
 
 interface Props {
@@ -46,6 +47,10 @@ const sanitizeReps = (value: string) => value.replace(/[^0-9]/g, "");
  * cuatro veces le quitaba ancho justo a lo que hay que tocar.
  */
 export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
+  // Una entrada por serie, lleve progresión o no: así la fila 3 sugiere lo
+  // suyo sin que este componente tenga que saber si hay progresión.
+  const targets = targetsOf(exercise);
+
   return (
     <View style={styles.list}>
       <View style={styles.columns}>
@@ -56,6 +61,8 @@ export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
       </View>
 
       {sets.map((set) => {
+        const target = targets[set.number - 1] ?? targets[0];
+
         return (
           <View key={set.number} style={styles.row}>
             <Text style={styles.number}>{set.number}</Text>
@@ -69,7 +76,7 @@ export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
               onChangeText={(value) =>
                 onChange(set.number, "weightKg", sanitizeWeight(value))
               }
-              placeholder={String(exercise.targetWeightKg)}
+              placeholder={String(target.weightKg)}
               placeholderTextColor={HomeColors.textTertiary}
               keyboardType="decimal-pad"
               selectTextOnFocus
@@ -83,7 +90,7 @@ export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
               onChangeText={(value) =>
                 onChange(set.number, "reps", sanitizeReps(value))
               }
-              placeholder={String(exercise.targetReps)}
+              placeholder={String(target.reps)}
               placeholderTextColor={HomeColors.textTertiary}
               keyboardType="number-pad"
               selectTextOnFocus

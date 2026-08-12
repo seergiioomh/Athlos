@@ -132,6 +132,8 @@ export interface PlanExerciseRow {
   sets: number;
   target_reps: number;
   target_weight_kg: number;
+  /** jsonb. Nulo = todas las series van al objetivo uniforme de arriba. */
+  set_targets: unknown;
   rest_seconds: number;
   ai_note: string | null;
 }

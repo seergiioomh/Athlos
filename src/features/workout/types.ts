@@ -20,9 +20,23 @@ export interface SuggestedExercise {
   sets: number;
   targetReps: number;
   targetWeightKg: number;
+  /**
+   * Objetivo de cada serie cuando no todas son iguales: ascendentes, back-off
+   * o descendentes.
+   *
+   * Nulo es lo normal y significa que todas las series van a `targetReps` y
+   * `targetWeightKg`. Nunca leas esto directamente: usa `targetsOf()`, que
+   * resuelve los dos casos y evita que cada pantalla se invente el suyo.
+   */
+  setTargets: SetTarget[] | null;
   restSeconds: number;
   /** Por qué la IA propone esta carga. Se muestra tal cual al usuario. */
   aiNote?: string;
+}
+
+export interface SetTarget {
+  reps: number;
+  weightKg: number;
 }
 
 export interface WorkoutPlan {

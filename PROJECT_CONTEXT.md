@@ -193,7 +193,15 @@ Tocar un día ya entrenado abre lo que se hizo ese día.
 
 **Entrenamiento.** Separa dos cosas que la gente confunde: los **objetivos
 sugeridos** por la IA (series, descanso, peso recomendado) que no se editan, y
-las **series registradas** por el usuario, que son lo que de verdad hizo. Al
+las **series registradas** por el usuario, que son lo que de verdad hizo.
+
+El objetivo puede ser **distinto en cada serie**: `plan_exercises.set_targets`
+guarda una progresión (ascendente, back-off, descendente) cuando la IA la
+propone, y es nulo cuando las series son iguales, que es lo normal. **Nunca
+leas esa columna a pelo**: `targetsOf()` en `features/workout/targets.ts`
+devuelve siempre una entrada por serie resuelva el caso que resuelva, y
+`targetSummary()` la resume en una línea. Cada pantalla que se lo monte por su
+cuenta acabará diciendo algo distinto. Al
 terminar aparece una pantalla de cierre con el resumen y tres preguntas de
 sensaciones, que el coach lee al preparar la siguiente sesión.
 

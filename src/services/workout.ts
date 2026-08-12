@@ -1,7 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import type { PlanExerciseWithExercise, WorkoutPlanRow } from "@/types/database";
 import type { SharedWorkout } from "@/features/workout/share";
-import type { CompletedSet, WorkoutPlan } from "@/features/workout/types";
+import type {
+  CompletedSet,
+  SetTarget,
+  WorkoutPlan,
+} from "@/features/workout/types";
 
 export interface SessionFeedback {
   energyDuring: number | null;
@@ -14,7 +18,7 @@ const PLAN_SELECT = `
   completed_at, created_at,
   plan_exercises (
     id, plan_id, exercise_id, position, sets, target_reps,
-    target_weight_kg, rest_seconds, ai_note,
+    target_weight_kg, set_targets, rest_seconds, ai_note,
     exercises ( id, slug, name, muscle_group, is_bodyweight )
   )
 `;
@@ -22,6 +26,31 @@ const PLAN_SELECT = `
 type PlanWithExercises = WorkoutPlanRow & {
   plan_exercises: PlanExerciseWithExercise[];
 };
+
+/**
+ * `set_targets` es jsonb: la base comprueba su forma al escribir, pero una fila
+ * anterior a esa restricción, o escrita a mano, puede traer cualquier cosa. Se
+ * valida aquí y, si no cuadra, se devuelve null: el ejercicio se queda con su
+ * objetivo uniforme en vez de romper la pantalla.
+ */
+function sanearSetTargets(value: unknown): SetTarget[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+
+  const targets = value.map((entry) => ({
+    reps: Number((entry as { reps?: unknown })?.reps),
+    weightKg: Number((entry as { weight_kg?: unknown })?.weight_kg),
+  }));
+
+  const valido = targets.every(
+    (target) =>
+      Number.isFinite(target.reps) &&
+      Number.isFinite(target.weightKg) &&
+      target.reps > 0 &&
+      target.weightKg >= 0
+  );
+
+  return valido ? targets : null;
+}
 
 const toDomain = (row: PlanWithExercises): WorkoutPlan => ({
   id: row.id,
@@ -43,6 +72,9 @@ const toDomain = (row: PlanWithExercises): WorkoutPlan => ({
       sets: item.sets,
       targetReps: item.target_reps,
       targetWeightKg: Number(item.target_weight_kg),
+      // Viene de una columna jsonb, así que puede traer cualquier cosa: se
+      // sanea aquí, en el borde, y el resto de la app ya la trata como tipada.
+      setTargets: sanearSetTargets(item.set_targets),
       restSeconds: item.rest_seconds,
       aiNote: item.ai_note ?? undefined,
     })),
@@ -244,6 +276,13 @@ export async function importSharedWorkout(
         sets: exercise.sets,
         target_reps: exercise.targetReps,
         target_weight_kg: exercise.targetWeightKg,
+        // De vuelta al formato de la base: el enlace usa `weightKg` y la
+        // columna `weight_kg`.
+        set_targets:
+          exercise.setTargets?.map((target) => ({
+            reps: target.reps,
+            weight_kg: target.weightKg,
+          })) ?? null,
         rest_seconds: exercise.restSeconds,
       }))
     );

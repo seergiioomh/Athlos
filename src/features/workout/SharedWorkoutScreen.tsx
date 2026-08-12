@@ -14,15 +14,13 @@ import { HomeColors } from "@/features/home/home-theme";
 import { errorMessage } from "@/utils/errors";
 import { ActiveWorkout } from "./ActiveWorkout";
 import { useImportSharedWorkout } from "./queries";
+import { targetSummary } from "./targets";
 import type { SharedWorkout } from "./share";
 import type { WorkoutPlan } from "./types";
 
 interface Props {
   shared: SharedWorkout | null;
 }
-
-const formatWeight = (kg: number) =>
-  kg === 0 ? "Peso corporal" : `${String(kg).replace(".", ",")} kg`;
 
 /**
  * Un entrenamiento que llegó por enlace: se enseña antes de guardarlo.
@@ -103,13 +101,7 @@ export function SharedWorkoutScreen({ shared }: Props) {
                 </Text>
 
                 <View style={styles.metrics}>
-                  <Text style={styles.metric}>
-                    {exercise.sets} × {exercise.targetReps}
-                  </Text>
-                  <Text style={styles.separator}>·</Text>
-                  <Text style={styles.metric}>
-                    {formatWeight(exercise.targetWeightKg)}
-                  </Text>
+                  <Text style={styles.metric}>{targetSummary(exercise)}</Text>
                 </View>
               </View>
             </View>

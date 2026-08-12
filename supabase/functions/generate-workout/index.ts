@@ -34,13 +34,64 @@ const EQUIPMENT_BY_PLACE: Record<string, string[]> = {
 const allowedEquipment = (place: string | null) =>
   EQUIPMENT_BY_PLACE[place ?? "gimnasio"] ?? EQUIPMENT_BY_PLACE.gimnasio;
 
+interface GeneratedSetTarget {
+  reps: number;
+  weight_kg: number;
+}
+
 interface GeneratedExercise {
   exercise_slug: string;
   sets: number;
   target_reps: number;
   target_weight_kg: number;
+  /** Opcional: un objetivo por serie cuando no todas son iguales. */
+  set_targets?: GeneratedSetTarget[];
   rest_seconds: number;
   ai_note: string;
+}
+
+/**
+ * Se queda la progresión solo si cuadra con el ejercicio.
+ *
+ * El esquema garantiza la forma, no el contenido: el modelo puede devolver
+ * cinco entradas para cuatro series. Antes que rechazar el entrenamiento
+ * entero por eso, se descarta la progresión y el ejercicio se queda con su
+ * objetivo uniforme, que es una degradación que el usuario ni nota.
+ *
+ * La base tiene la misma comprobación en un `check`; esta evita que un plan
+ * bueno se pierda por un detalle recuperable.
+ */
+function sanearProgresion(
+  item: GeneratedExercise,
+): GeneratedSetTarget[] | null {
+  const targets = item.set_targets;
+
+  if (!Array.isArray(targets) || targets.length !== item.sets) return null;
+
+  const valido = targets.every(
+    (entrada) =>
+      Number.isFinite(entrada?.reps) &&
+      Number.isFinite(entrada?.weight_kg) &&
+      entrada.reps >= 1 &&
+      entrada.reps <= 100 &&
+      entrada.weight_kg >= 0 &&
+      entrada.weight_kg <= 9999,
+  );
+
+  if (!valido) {
+    console.warn("Progresión descartada", item.exercise_slug, targets);
+    return null;
+  }
+
+  // Todas iguales no es una progresión: guardarlo solo ocupa sitio y obliga a
+  // la pantalla a enseñar el objetivo por fila para nada.
+  const iguales = targets.every(
+    (entrada) =>
+      entrada.reps === targets[0].reps &&
+      entrada.weight_kg === targets[0].weight_kg,
+  );
+
+  return iguales ? null : targets;
 }
 
 interface GeneratedPlan {
@@ -78,6 +129,23 @@ const planSchema = {
             type: "number",
             description: "0 para ejercicios de peso corporal.",
           },
+          set_targets: {
+            type: "array",
+            description:
+              "Opcional. Objetivo de CADA serie, en orden, cuando no todas son iguales: ascendentes, back-off, descendentes. Omítelo si las series son idénticas; entonces se usan target_reps y target_weight_kg. Si lo mandas, tantas entradas como series.",
+            items: {
+              type: "object",
+              properties: {
+                reps: { type: "integer" },
+                weight_kg: {
+                  type: "number",
+                  description: "0 para ejercicios de peso corporal.",
+                },
+              },
+              required: ["reps", "weight_kg"],
+              additionalProperties: false,
+            },
+          },
           rest_seconds: { type: "integer" },
           ai_note: {
             type: "string",
@@ -105,10 +173,6 @@ const SYSTEM = `Eres el entrenador personal de la app ATHLOS. Diseñas el entren
 de hoy para un usuario concreto, a partir de su historial reciente.
 
 Reglas:
-- EL REPARTO SEMANAL MANDA. Si el usuario tiene un reparto vigente, el foco del
-  día lo decide él, no tú: si hoy le toca Pull, la sesión es de Pull entera. No
-  es una sugerencia ni un punto de partida. Solo eliges el foco cuando no hay
-  reparto, o cuando hoy no es un día de entrenamiento suyo.
 - EL CICLO MANDA. Se te dice qué sesión le toca, y el foco lo decide ella, no
   tú: si le toca Pull, la sesión es de Pull entera. No es una sugerencia ni un
   punto de partida. Solo eliges el foco cuando no hay ciclo.
@@ -124,6 +188,13 @@ Reglas:
 - Equilibra los patrones de movimiento: no encadenes dos empujes horizontales
   ni montes una sesión entera de aislamiento.
 - Ajusta el volumen al nivel y a los días por semana que tiene disponibles.
+- Puedes dar un objetivo DISTINTO A CADA SERIE con \`set_targets\` cuando el
+  ejercicio lo pida: series ascendentes para subir a un tope, back-off tras una
+  serie pesada, o descendentes si llega justo al final. Úsalo cuando aporte,
+  no por sistema: para trabajo de aislamiento o de técnica, cuatro series
+  iguales suelen ser lo correcto y basta con omitirlo.
+- Si mandas \`set_targets\`, explica la progresión en \`ai_note\`: quien entrena
+  tiene que entender por qué sube o baja el peso entre series.
 - La sesión tiene que caber en los minutos que dice tener. Cuenta el descanso:
   cuatro series con 90 s de descanso son más de seis minutos solo de espera.
 - Si su técnica en los básicos no es sólida, no le mandes compuestos con barra
@@ -374,6 +445,7 @@ Deno.serve(async (req: Request) => {
         sets: item.sets,
         target_reps: item.target_reps,
         target_weight_kg: item.target_weight_kg,
+        set_targets: sanearProgresion(item),
         rest_seconds: item.rest_seconds,
         ai_note: item.ai_note,
       })),

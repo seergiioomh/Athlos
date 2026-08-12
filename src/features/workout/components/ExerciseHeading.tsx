@@ -1,14 +1,12 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { HomeColors } from "@/features/home/home-theme";
+import { targetSummary } from "../targets";
 import { SuggestedExercise } from "../types";
 
 interface Props {
   exercise: SuggestedExercise;
 }
-
-const formatWeight = (kg: number) =>
-  kg === 0 ? "corporal" : `${String(kg).replace(".", ",")} kg`;
 
 const formatRest = (seconds: number) =>
   seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`;
@@ -16,15 +14,19 @@ const formatRest = (seconds: number) =>
 /**
  * El ejercicio y su objetivo, en dos líneas.
  *
- * Sustituye a la tarjeta de cuatro métricas. El objetivo es el mismo para
- * todas las series, así que decirlo una vez aquí basta: antes salía en la
+ * Sustituye a la tarjeta de cuatro métricas. Antes el objetivo salía en la
  * tarjeta, otra vez en una columna de cada fila y una tercera dentro de los
- * campos. Con tres repeticiones no cabían las cinco columnas en un móvil.
+ * campos; con tres repeticiones no cabían las cinco columnas en un móvil.
+ *
+ * Ahora se dice aquí. Si el ejercicio lleva progresión, el resumen enumera
+ * los pesos y cada fila sugiere el suyo en su propio campo.
  */
 export function ExerciseHeading({ exercise }: Props) {
+  // Con progresión el resumen enumera los pesos en vez de dar uno solo, que
+  // sería mentira. Lo resuelve `targetSummary`, compartido con las demás
+  // pantallas para que todas digan lo mismo.
   const objetivo = [
-    `${exercise.sets} × ${exercise.targetReps}`,
-    formatWeight(exercise.targetWeightKg),
+    targetSummary(exercise),
     `${formatRest(exercise.restSeconds)} descanso`,
   ].join(" · ");
 
