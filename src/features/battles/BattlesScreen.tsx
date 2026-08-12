@@ -1,6 +1,11 @@
-import { ArrowLeft01Icon, ChampionIcon } from "@hugeicons/core-free-icons";
+import {
+  ArrowLeft01Icon,
+  ChampionIcon,
+  InformationCircleIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,6 +22,7 @@ import { useUserId } from "@/features/auth/session";
 import { HomeColors } from "@/features/home/home-theme";
 import { errorMessage } from "@/utils/errors";
 import { BattleEmpty } from "./components/BattleEmpty";
+import { BattleInfoSheet } from "./components/BattleInfoSheet";
 import { BattleLeaderboard } from "./components/BattleLeaderboard";
 import { BattleLobby } from "./components/BattleLobby";
 import { daysLeftLabel } from "./format";
@@ -38,6 +44,8 @@ const recienTerminada = (endsAt: string | null) => {
 export function BattlesScreen() {
   const router = useRouter();
   const meId = useUserId()!;
+
+  const [explaining, setExplaining] = useState(false);
 
   const { data: battle, isPending, error } = useCurrentBattle();
 
@@ -72,20 +80,39 @@ export function BattlesScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={back}
-          hitSlop={10}
-          style={styles.back}
-          accessibilityLabel="Volver"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            size={20}
-            color={HomeColors.text}
-            strokeWidth={2}
-          />
-        </TouchableOpacity>
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={back}
+            hitSlop={10}
+            style={styles.back}
+            accessibilityLabel="Volver"
+          >
+            <HugeiconsIcon
+              icon={ArrowLeft01Icon}
+              size={20}
+              color={HomeColors.text}
+              strokeWidth={2}
+            />
+          </TouchableOpacity>
+
+          {/* Siempre visible, también sin batalla: es justo antes de crear la
+              primera cuando más falta hace saber en qué consiste. */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setExplaining(true)}
+            hitSlop={10}
+            style={styles.back}
+            accessibilityLabel="Cómo funcionan las batallas"
+          >
+            <HugeiconsIcon
+              icon={InformationCircleIcon}
+              size={20}
+              color={HomeColors.primary}
+              strokeWidth={2}
+            />
+          </TouchableOpacity>
+        </View>
 
         <Text style={styles.title}>{battle?.name ?? "Batallas"}</Text>
 
@@ -148,6 +175,11 @@ export function BattlesScreen() {
         )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <BattleInfoSheet
+        visible={explaining}
+        onClose={() => setExplaining(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -157,6 +189,13 @@ const styles = StyleSheet.create({
   keyboard: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 60 },
 
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+
   back: {
     width: 38,
     height: 38,
@@ -164,7 +203,6 @@ const styles = StyleSheet.create({
     backgroundColor: HomeColors.surface,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
   },
 
   title: {
