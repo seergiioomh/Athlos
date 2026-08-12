@@ -194,15 +194,15 @@ const styles = StyleSheet.create({
     color: HomeColors.errorText,
   },
 
-  family: { marginTop: 28 },
+  family: { marginTop: 22 },
 
   familyTitle: {
-    marginBottom: 12,
+    marginBottom: 9,
     fontSize: 13,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
 
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

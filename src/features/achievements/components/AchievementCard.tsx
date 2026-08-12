@@ -61,7 +61,7 @@ export function AchievementCard({ achievement, metrics, unlockedAt }: Props) {
             icon={achievement.icon}
             color={color}
             unlocked={unlocked}
-            size={48}
+            size={42}
           />
         </View>
 
@@ -141,31 +141,32 @@ const styles = StyleSheet.create({
   card: {
     flexBasis: "47.8%",
     flexGrow: 1,
-    padding: 12,
-    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 18,
     backgroundColor: HomeColors.surface,
     borderWidth: 1,
     borderColor: "transparent",
   },
 
   // Todo centrado bajo el emblema, como una medalla en su vitrina.
-  badgeRow: { alignItems: "center", marginBottom: 8 },
+  badgeRow: { alignItems: "center", marginBottom: 7 },
 
   name: {
-    fontSize: 15,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 17,
     fontWeight: "700",
     color: HomeColors.text,
     textAlign: "center",
     // Sitio para dos líneas siempre. Con nombres de una y de dos conviviendo
     // en la misma fila, todo lo que va debajo bailaba de una tarjeta a otra.
-    minHeight: 36,
+    minHeight: 34,
   },
 
   nameLocked: { color: HomeColors.textSecondary },
 
   date: {
-    marginTop: 4,
+    marginTop: 2,
     fontSize: 11,
     fontWeight: "600",
     color: HomeColors.textTertiary,
