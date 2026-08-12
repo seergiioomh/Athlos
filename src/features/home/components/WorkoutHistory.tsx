@@ -11,7 +11,7 @@ type Props = {
    * tocado, no la del plan: una sesión de madrugada podría quedar registrada
    * con la fecha del día anterior, y lo que importa es qué día se tocó.
    */
-  onSelectDay: (planId: string, date: Date) => void;
+  onSelectDay: (sessionId: string, date: Date) => void;
   sessions: WeekSession[];
 };
 
@@ -57,7 +57,7 @@ const buildDays = (sessions: WeekSession[]) => {
       trained: Boolean(session),
       // Puede haber sesión sin plan: el plan se desengancha (no se borra) si
       // se regenera. Ese día se ve entrenado, pero no hay nada que abrir.
-      planId: session?.planId ?? null,
+      sessionId: session?.id ?? null,
       isToday: index === TODAY_INDEX,
     };
   });
@@ -110,9 +110,9 @@ export function WorkoutHistory({ onPress, onSelectDay, sessions }: Props) {
         index,
       })}
       renderItem={({ item }) => <TouchableOpacity
-        activeOpacity={item.planId ? 0.8 : 1}
+        activeOpacity={item.sessionId ? 0.8 : 1}
         onPress={() =>
-          item.planId && onSelectDay(item.planId, item.fullDate)
+          item.sessionId && onSelectDay(item.sessionId, item.fullDate)
         }
         style={[styles.card, item.isToday && styles.selectedCard]}
       >
@@ -122,7 +122,7 @@ export function WorkoutHistory({ onPress, onSelectDay, sessions }: Props) {
           { backgroundColor: item.trained
             // Una sesión completada conserva el verde, también en el día actual.
             ? HomeColors.success
-            : (item.isToday ? "rgba(12,17,2,0.35)" : HomeColors.border) },
+            : (item.isToday ? HomeColors.textTertiary : HomeColors.border) },
         ]} />
       </TouchableOpacity>}
     />
@@ -133,6 +133,6 @@ const styles = StyleSheet.create({
   container: { marginTop: 28 }, heading: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   title: { fontSize: 20, fontWeight: "700", color: HomeColors.text }, link: { fontSize: 14, fontWeight: "600", color: HomeColors.primary },
   list: { gap: CARD_GAP, paddingRight: 16 }, card: { width: CARD_WIDTH, height: 82, backgroundColor: HomeColors.surface, borderRadius: 24, justifyContent: "center", alignItems: "center" },
-  selectedCard: { backgroundColor: HomeColors.primary }, selectedText: { color: HomeColors.onPrimary }, day: { fontSize: 14, color: HomeColors.textSecondary, marginBottom: 6 },
-  date: { fontSize: 22, fontWeight: "700", color: HomeColors.text }, dot: { width: 8, height: 8, borderRadius: 4, marginTop: 8 },
+  selectedCard: { backgroundColor: HomeColors.surfaceHighlight }, selectedText: { color: HomeColors.text }, day: { fontSize: 14, color: HomeColors.textTertiary, marginBottom: 6 },
+  date: { fontSize: 22, fontWeight: "700", color: HomeColors.textSecondary }, dot: { width: 8, height: 8, borderRadius: 4, marginTop: 8 },
 });

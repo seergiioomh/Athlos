@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { profileKeys } from "@/features/onboarding/queries";
-import { deleteAccount, saveProfile } from "@/services/profile";
+import {
+  deleteAccount,
+  fetchTrainingHistory,
+  saveProfile,
+} from "@/services/profile";
 import {
   approveCycle,
   fetchActiveCycle,
@@ -15,6 +19,21 @@ export const splitKeys = {
   active: (userId: string) => ["split", "active", userId] as const,
   draft: (userId: string) => ["split", "draft", userId] as const,
 };
+
+export const profileHistoryKeys = {
+  training: (userId: string) => ["profile", "training-history", userId] as const,
+};
+
+/** El historial solo se carga al abrirlo: no pesa en la entrada al perfil. */
+export function useTrainingHistory(enabled: boolean) {
+  const userId = useUserId()!;
+
+  return useQuery({
+    queryKey: profileHistoryKeys.training(userId),
+    queryFn: () => fetchTrainingHistory(userId),
+    enabled,
+  });
+}
 
 /** El ciclo que el usuario ya aprobó. */
 export function useActiveCycle() {

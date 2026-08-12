@@ -36,9 +36,9 @@ export function BattleCard({ onPress }: Props) {
   if (!yo) return null;
 
   const voyGanando = posicion === 1;
-  const diferencia = voyGanando
-    ? yo.totalPoints - (score[1]?.totalPoints ?? 0)
-    : lider.totalPoints - yo.totalPoints;
+  const avance = lider.totalPoints > 0
+    ? Math.max(8, Math.min(100, (yo.totalPoints / lider.totalPoints) * 100))
+    : 0;
 
   return (
     <TouchableOpacity
@@ -57,109 +57,114 @@ export function BattleCard({ onPress }: Props) {
         </View>
 
         <View style={styles.headerText}>
+          <Text style={styles.eyebrow}>BATALLA ACTIVA</Text>
           <Text style={styles.name} numberOfLines={1}>
             {battle.name}
           </Text>
-          <Text style={styles.days}>{daysLeftLabel(battle.endsAt)}</Text>
         </View>
 
-        <HugeiconsIcon
-          icon={ArrowRight01Icon}
-          size={18}
-          color={HomeColors.textSecondary}
-          strokeWidth={2}
-        />
+        <View style={styles.daysPill}>
+          <Text style={styles.days}>{daysLeftLabel(battle.endsAt)}</Text>
+        </View>
       </View>
 
       <View style={styles.body}>
         <View style={styles.position}>
-          <Text style={styles.positionValue}>{posicion}º</Text>
-          <Text style={styles.positionLabel}>de {score.length}</Text>
+          <Text style={[styles.positionValue, voyGanando && styles.positionWinning]}>
+            {posicion}º
+          </Text>
         </View>
 
-        <View style={styles.divider} />
-
         <View style={styles.pointsBox}>
-          <Text style={styles.pointsValue}>{points(yo.totalPoints)}</Text>
-          <Text style={styles.pointsLabel}>puntos</Text>
+          <View style={styles.pointsHeader}>
+            <Text style={styles.pointsLabel}>TU PUNTUACIÓN</Text>
+            <HugeiconsIcon
+              icon={ArrowRight01Icon}
+              size={17}
+              color={HomeColors.textSecondary}
+              strokeWidth={2}
+            />
+          </View>
+          <Text style={styles.pointsValue}>{points(yo.totalPoints)} <Text style={styles.pointsUnit}>pts</Text></Text>
+          {score.length > 1 && (
+            <View style={styles.track}>
+              <View
+                style={[
+                  styles.fill,
+                  { width: `${avance}%` },
+                  voyGanando && styles.fillWinning,
+                ]}
+              />
+            </View>
+          )}
         </View>
       </View>
 
-      <Text style={[styles.gap, voyGanando && styles.gapWinning]}>
-        {score.length === 1
-          ? "Todavía no hay rivales"
-          : diferencia === 0
-            ? "Empatado con el primero"
-            : voyGanando
-              ? `Vas primero por ${points(diferencia)}`
-              : `Te faltan ${points(diferencia)} para el primero`}
-      </Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 22,
+    marginTop: 18,
+    padding: 18,
+    borderRadius: 24,
     backgroundColor: HomeColors.surface,
   },
 
   header: { flexDirection: "row", alignItems: "center", gap: 10 },
 
   icon: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: HomeColors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
 
   headerText: { flex: 1 },
-  name: { fontSize: 15, fontWeight: "700", color: HomeColors.text },
-  days: { marginTop: 1, fontSize: 12, color: HomeColors.textSecondary },
+  eyebrow: { fontSize: 10, fontWeight: "700", letterSpacing: 0.7, color: HomeColors.primary },
+  name: { marginTop: 2, fontSize: 16, fontWeight: "700", color: HomeColors.text },
+  daysPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: HomeColors.surfaceElevated },
+  days: { fontSize: 11, fontWeight: "600", color: HomeColors.textSecondary },
 
   body: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 14,
-    gap: 16,
+    marginTop: 18,
+    gap: 18,
   },
 
-  position: { alignItems: "center" },
+  position: { width: 88, alignItems: "center" },
 
   positionValue: {
-    fontSize: 26,
+    fontSize: 42,
     fontWeight: "800",
     letterSpacing: -1,
     color: HomeColors.primary,
     fontVariant: ["tabular-nums"],
   },
-
-  positionLabel: { fontSize: 11, color: HomeColors.textSecondary },
-
-  divider: { width: 1, height: 34, backgroundColor: HomeColors.border },
+  positionWinning: { color: HomeColors.primary },
 
   pointsBox: { flex: 1 },
 
+  pointsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+
   pointsValue: {
-    fontSize: 22,
+    marginTop: 2,
+    fontSize: 27,
     fontWeight: "800",
     letterSpacing: -0.6,
     color: HomeColors.text,
     fontVariant: ["tabular-nums"],
   },
 
-  pointsLabel: { fontSize: 11, color: HomeColors.textSecondary },
+  pointsUnit: { fontSize: 14, fontWeight: "700", color: HomeColors.textSecondary },
+  pointsLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.6, color: HomeColors.textTertiary },
 
-  gap: {
-    marginTop: 12,
-    fontSize: 12,
-    fontWeight: "600",
-    color: HomeColors.textSecondary,
-  },
+  track: { height: 6, marginTop: 9, borderRadius: 3, overflow: "hidden", backgroundColor: HomeColors.border },
+  fill: { height: "100%", borderRadius: 3, backgroundColor: HomeColors.purple },
+  fillWinning: { backgroundColor: HomeColors.primary },
 
-  gapWinning: { color: HomeColors.primary },
 });

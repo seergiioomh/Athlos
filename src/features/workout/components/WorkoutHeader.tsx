@@ -6,15 +6,21 @@ import { HomeColors } from "@/features/home/home-theme";
 
 interface Props {
   title: string;
-  focus: string;
   exerciseIndex: number;
   exerciseCount: number;
   onBack: () => void;
 }
 
+/**
+ * Volver, el aviso de que los objetivos los pone la IA, y por dónde va la
+ * sesión.
+ *
+ * El nombre del plan queda pequeño y el foco ya no se enseña: mientras
+ * entrenas importa el ejercicio que tienes delante, no cómo se llama el
+ * conjunto. Ese protagonismo se lo lleva `ExerciseHeading`.
+ */
 export function WorkoutHeader({
   title,
-  focus,
   exerciseIndex,
   exerciseCount,
   onBack,
@@ -51,14 +57,13 @@ export function WorkoutHeader({
         </View>
       </View>
 
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.focus}>{focus}</Text>
+      <Text style={styles.title} numberOfLines={1}>
+        {title}
+      </Text>
 
       <View style={styles.progressRow}>
         <View style={styles.track}>
-          <View
-            style={[styles.fill, { width: `${progress * 100}%` }]}
-          />
+          <View style={[styles.fill, { width: `${progress * 100}%` }]} />
         </View>
 
         <Text style={styles.progressText}>
@@ -70,10 +75,7 @@ export function WorkoutHeader({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 4,
-    marginBottom: 22,
-  },
+  container: { marginTop: 4, marginBottom: 20 },
 
   row: {
     flexDirection: "row",
@@ -108,21 +110,14 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    marginTop: 18,
-    fontSize: 30,
-    fontWeight: "700",
-    letterSpacing: -0.6,
-    color: HomeColors.text,
-  },
-
-  focus: {
-    marginTop: 4,
-    fontSize: 14,
+    marginTop: 16,
+    fontSize: 13,
+    fontWeight: "600",
     color: HomeColors.textSecondary,
   },
 
   progressRow: {
-    marginTop: 16,
+    marginTop: 10,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,

@@ -9,8 +9,7 @@ import {
 } from "react-native";
 
 import { HomeColors } from "@/features/home/home-theme";
-import { ExerciseTargetCard } from "./components/ExerciseTargetCard";
-import { NextExerciseCard } from "./components/NextExerciseCard";
+import { ExerciseHeading } from "./components/ExerciseHeading";
 import { RestTimer } from "./components/RestTimer";
 import { SetLogCard } from "./components/SetLogCard";
 import { WorkoutHeader } from "./components/WorkoutHeader";
@@ -68,13 +67,12 @@ export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
       >
         <WorkoutHeader
           title={plan.title}
-          focus={plan.focus}
           exerciseIndex={session.exerciseIndex}
           exerciseCount={session.exerciseCount}
           onBack={onBack}
         />
 
-        <ExerciseTargetCard exercise={session.exercise} />
+        <ExerciseHeading exercise={session.exercise} />
 
         {session.resting && (
           <RestTimer
@@ -98,7 +96,13 @@ export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
           </View>
         )}
 
-        {session.nextUp ? <NextExerciseCard exercise={session.nextUp} /> : null}
+        {/* Una línea y no una tarjeta: es contexto de lo que viene, no algo
+            sobre lo que haya que actuar ahora. */}
+        {session.nextUp ? (
+          <Text style={styles.next} numberOfLines={1}>
+            Después: {session.nextUp.name}
+          </Text>
+        ) : null}
 
         <View style={styles.actions}>
           {session.exerciseIndex > 0 && (
@@ -155,6 +159,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     color: HomeColors.errorText,
+  },
+
+  next: {
+    marginTop: 14,
+    fontSize: 13,
+    color: HomeColors.textTertiary,
   },
 
   actions: {

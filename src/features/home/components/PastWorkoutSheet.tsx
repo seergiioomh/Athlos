@@ -10,13 +10,11 @@ import {
   View,
 } from "react-native";
 
-import { MuscleMap } from "@/components/ui/MuscleMap";
-import type { WorkoutPlan } from "@/features/workout/types";
+import type { CompletedWorkoutExercise } from "@/services/home";
 import { HomeColors } from "../home-theme";
-import { PlanExerciseList } from "./PlanExerciseList";
 
 interface Props {
-  plan: WorkoutPlan | null;
+  workout: CompletedWorkoutExercise[] | null;
   date: Date | null;
   loading: boolean;
   visible: boolean;
@@ -42,7 +40,7 @@ const formatDate = (date: Date) =>
  * semanas.
  */
 export function PastWorkoutSheet({
-  plan,
+  workout,
   date,
   loading,
   visible,
@@ -63,7 +61,7 @@ export function PastWorkoutSheet({
         <View style={styles.header}>
           <View style={styles.headerText}>
             {date && <Text style={styles.date}>{formatDate(date)}</Text>}
-            {plan && <Text style={styles.title}>{plan.title}</Text>}
+            <Text style={styles.title}>Entrenamiento realizado</Text>
           </View>
 
           <TouchableOpacity
@@ -82,12 +80,6 @@ export function PastWorkoutSheet({
           </TouchableOpacity>
         </View>
 
-        {plan && (
-          <View style={styles.mapRow}>
-            <MuscleMap exercises={plan.exercises} size={120} />
-          </View>
-        )}
-
         <ScrollView
           style={styles.list}
           contentContainerStyle={styles.listContent}
@@ -95,17 +87,40 @@ export function PastWorkoutSheet({
         >
           {loading ? (
             <Text style={styles.empty}>Cargando…</Text>
-          ) : plan ? (
-            <PlanExerciseList exercises={plan.exercises} />
+          ) : workout?.length ? (
+            <CompletedExerciseList exercises={workout} />
           ) : (
             <Text style={styles.empty}>
-              No se pudo recuperar ese entrenamiento.
+              No hay series registradas para este entrenamiento.
             </Text>
           )}
         </ScrollView>
       </View>
     </Modal>
   );
+}
+
+function CompletedExerciseList({ exercises }: { exercises: CompletedWorkoutExercise[] }) {
+  return exercises.map((exercise, index) => (
+    <View key={exercise.exerciseId} style={styles.exercise}>
+      <View style={styles.position}>
+        <Text style={styles.positionText}>{index + 1}</Text>
+      </View>
+      <View style={styles.exerciseDetails}>
+        <Text style={styles.exerciseName}>{exercise.name}</Text>
+        <Text style={styles.muscle}>{exercise.muscleGroup}</Text>
+        <View style={styles.sets}>
+          {exercise.sets
+            .sort((a, b) => a.number - b.number)
+            .map((set) => (
+              <Text key={set.number} style={styles.set}>
+                {set.number}. {String(set.weightKg).replace(".", ",")} kg × {set.reps}
+              </Text>
+            ))}
+        </View>
+      </View>
+    </View>
+  ));
 }
 
 const styles = StyleSheet.create({
@@ -168,8 +183,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  mapRow: { alignItems: "center", marginTop: 6 },
-
   list: { marginTop: 14 },
   listContent: { gap: 10, paddingBottom: 8 },
 
@@ -179,4 +192,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: HomeColors.textSecondary,
   },
+  exercise: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 18, backgroundColor: HomeColors.surface },
+  position: { width: 26, height: 26, borderRadius: 9, backgroundColor: HomeColors.primarySoft, alignItems: "center", justifyContent: "center" },
+  positionText: { fontSize: 13, fontWeight: "700", color: HomeColors.primary },
+  exerciseDetails: { flex: 1 },
+  exerciseName: { fontSize: 16, fontWeight: "700", color: HomeColors.text },
+  muscle: { marginTop: 1, fontSize: 12, color: HomeColors.textSecondary },
+  sets: { marginTop: 9, gap: 4 },
+  set: { fontSize: 13, fontWeight: "600", color: HomeColors.text, fontVariant: ["tabular-nums"] },
 });

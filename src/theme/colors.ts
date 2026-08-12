@@ -32,6 +32,8 @@ export const Colors = {
   blue: "#0A84FF",
   blueSoft: "rgba(10,132,255,0.16)",
   orange: "#FF9F0A",
+  /** Naranja más vivo, reservado para el avance de las rachas. */
+  orangeStrong: "#FF7A00",
   orangeSoft: "rgba(255,159,10,0.16)",
   teal: "#40D6C8",
   tealSoft: "rgba(64,214,200,0.16)",
@@ -40,6 +42,8 @@ export const Colors = {
   background: "#000000",
   surface: "#141416",
   surfaceElevated: "#1E1E22",
+  /** Superficie de énfasis sutil, para señalar el día actual. */
+  surfaceHighlight: "#2A2A2E",
 
   // -------------------------------------------------------------- texto
   text: "#FFFFFF",

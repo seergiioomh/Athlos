@@ -53,3 +53,33 @@ export async function saveProfile(
 
   return data;
 }
+
+/**
+ * Días locales en los que el usuario terminó al menos un entrenamiento.
+ *
+ * Se devuelven las fechas porque el calendario necesita pintar cada casilla;
+ * no trae información de ejercicios, series ni pesos.
+ */
+export async function fetchTrainingHistory(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("workout_sessions")
+    .select("finished_at")
+    .eq("user_id", userId)
+    .not("finished_at", "is", null);
+
+  if (error) throw error;
+
+  return [
+    ...new Set(
+      (data ?? []).flatMap((session) => {
+        if (!session.finished_at) return [];
+
+        const date = new Date(session.finished_at);
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+
+        return [`${date.getFullYear()}-${month}-${day}`];
+      })
+    ),
+  ];
+}

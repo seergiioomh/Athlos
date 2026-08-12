@@ -1,18 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 
 import {
+  fetchCompletedWorkout,
   fetchRecentSessions,
   fetchStats,
   fetchWeightHistory,
 } from "@/services/home";
-import { fetchPlanById } from "@/services/workout";
 import { useUserId } from "@/features/auth/session";
 
 export const homeKeys = {
   weight: (userId: string) => ["home", "weight", userId] as const,
   sessions: (userId: string) => ["home", "sessions", userId] as const,
   stats: (userId: string) => ["home", "stats", userId] as const,
-  dayPlan: (planId: string) => ["home", "day-plan", planId] as const,
+  completedWorkout: (sessionId: string) => ["home", "completed-workout", sessionId] as const,
 };
 
 export function useWeightHistory() {
@@ -33,12 +33,12 @@ export function useRecentSessions() {
   });
 }
 
-/** El plan de un día concreto de "Esta semana", al tocarlo. */
-export function useDayPlan(planId: string | null) {
+/** Lo registrado en un día concreto de "Esta semana", al tocarlo. */
+export function useCompletedWorkout(sessionId: string | null) {
   return useQuery({
-    queryKey: homeKeys.dayPlan(planId ?? "ninguno"),
-    queryFn: () => fetchPlanById(planId!),
-    enabled: Boolean(planId),
+    queryKey: homeKeys.completedWorkout(sessionId ?? "ninguna"),
+    queryFn: () => fetchCompletedWorkout(sessionId!),
+    enabled: Boolean(sessionId),
   });
 }
 

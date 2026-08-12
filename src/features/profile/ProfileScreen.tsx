@@ -2,8 +2,10 @@ import {
   ArrowRight01Icon,
   Calendar03Icon,
   ChampionIcon,
-  PencilEdit02Icon,
+  Dumbbell01Icon,
+  RepeatIcon,
   Sword01Icon,
+  UserIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import Constants from "expo-constants";
@@ -28,18 +30,6 @@ import { useCurrentBattle } from "@/features/battles/queries";
 import { HomeColors } from "@/features/home/home-theme";
 import { EXP_PER_LEVEL, levelFromStats } from "@/features/home/level";
 import { useProfile } from "@/features/onboarding/queries";
-import {
-  cardioOptions,
-  dailyActivityOptions,
-  equipmentOptions,
-  experienceOptions,
-  focusAreaOptions,
-  goalOptions,
-  sexOptions,
-  sportOptions,
-  techniqueOptions,
-  weekdayOptions,
-} from "@/features/onboarding/schema";
 import { useProgressSummary, useStreak } from "@/features/progress/queries";
 
 import type { ProfileRow } from "@/types/database";
@@ -49,28 +39,13 @@ import {
   type EditSection,
 } from "./components/EditProfileSheet";
 import { NotificationsCard } from "./components/NotificationsCard";
+import { TrainingHistoryModal } from "./components/TrainingHistoryModal";
 import {
   useActiveCycle,
   useDeleteAccount,
+  useTrainingHistory,
   useUpdateProfile,
 } from "./queries";
-
-const labelOf = (
-  options: { value: string; label: string }[],
-  value: string | null
-) => options.find((option) => option.value === value)?.label ?? "—";
-
-/** Igual que `labelOf` pero para los campos de selección múltiple. */
-const labelsOf = (
-  options: { value: string; label: string }[],
-  values: string[] | null
-) =>
-  values?.length
-    ? values
-        .map((value) => labelOf(options, value))
-        .filter((label) => label !== "—")
-        .join(" · ")
-    : "—";
 
 const initialsOf = (name: string) =>
   name
@@ -79,25 +54,6 @@ const initialsOf = (name: string) =>
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("") || "?";
-
-/**
- * Edad cumplida. Se calcula por componentes y no dividiendo milisegundos,
- * porque los años bisiestos hacen que la división se equivoque justo el día
- * del cumpleaños.
- */
-const yearsSince = (iso: string) => {
-  const born = new Date(iso);
-  const today = new Date();
-
-  let years = today.getFullYear() - born.getFullYear();
-  const beforeBirthday =
-    today.getMonth() < born.getMonth() ||
-    (today.getMonth() === born.getMonth() && today.getDate() < born.getDate());
-
-  if (beforeBirthday) years -= 1;
-
-  return years;
-};
 
 const memberSince = (iso: string) =>
   new Date(iso).toLocaleDateString("es-ES", {
@@ -108,6 +64,7 @@ const memberSince = (iso: string) =>
 export function ProfileScreen() {
   const router = useRouter();
   const [editing, setEditing] = useState<EditSection | null>(null);
+  const [historyVisible, setHistoryVisible] = useState(false);
 
   const { data: profile, isPending } = useProfile();
   const { data: summary } = useProgressSummary();
@@ -115,6 +72,7 @@ export function ProfileScreen() {
   const { data: split } = useActiveCycle();
   const { data: achievementMetrics } = useAchievementMetrics();
   const { data: battle } = useCurrentBattle();
+  const history = useTrainingHistory(historyVisible);
   const { email } = useSession();
   const update = useUpdateProfile();
   const remove = useDeleteAccount();
@@ -172,10 +130,6 @@ export function ProfileScreen() {
     finishedSessions: summary?.finishedSessions ?? 0,
     completedSets: summary?.totalSets ?? 0,
   });
-
-  const age = profile.birth_date
-    ? `${yearsSince(profile.birth_date)} años`
-    : "—";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -247,7 +201,7 @@ export function ProfileScreen() {
         >
           <View style={styles.planIcon}>
             <HugeiconsIcon
-              icon={Calendar03Icon}
+              icon={RepeatIcon}
               size={19}
               color={HomeColors.primary}
               strokeWidth={2}
@@ -304,6 +258,33 @@ export function ProfileScreen() {
 
         <TouchableOpacity
           activeOpacity={0.85}
+          onPress={() => setHistoryVisible(true)}
+          style={styles.planButton}
+        >
+          <View style={styles.planIcon}>
+            <HugeiconsIcon
+              icon={Calendar03Icon}
+              size={19}
+              color={HomeColors.primary}
+              strokeWidth={2}
+            />
+          </View>
+
+          <View style={styles.planText}>
+            <Text style={styles.planTitle}>Historia</Text>
+            <Text style={styles.planSubtitle}>Tu constancia, día a día</Text>
+          </View>
+
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            size={18}
+            color={HomeColors.textSecondary}
+            strokeWidth={2}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
           onPress={() => router.push("/batallas")}
           style={styles.planButton}
         >
@@ -335,91 +316,61 @@ export function ProfileScreen() {
           />
         </TouchableOpacity>
 
-        {/* ------------------------------------------------------ personal */}
-        <Section
-          title="Datos personales"
-          onEdit={() => setEditing("personal")}
-        />
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => setEditing("personal")}
+          style={styles.planButton}
+        >
+          <View style={styles.planIcon}>
+            <HugeiconsIcon
+              icon={UserIcon}
+              size={19}
+              color={HomeColors.primary}
+              strokeWidth={2}
+            />
+          </View>
 
-        <View style={styles.card}>
-          <Row label="Nombre" value={profile.display_name ?? "—"} />
-          <Row label="Edad" value={age} />
-          <Row label="Sexo" value={labelOf(sexOptions, profile.sex)} />
-          <Row
-            label="Altura"
-            value={profile.height_cm ? `${profile.height_cm} cm` : "—"}
-          />
-          <Row
-            label="Peso"
-            value={profile.weight_kg ? `${profile.weight_kg} kg` : "—"}
-            last
-          />
-        </View>
+          <View style={styles.planText}>
+            <Text style={styles.planTitle}>Datos personales</Text>
+            <Text style={styles.planSubtitle}>Nombre, medidas y datos básicos</Text>
+          </View>
 
-        {/* ---------------------------------------------------- entreno */}
-        <Section title="Entrenamiento" onEdit={() => setEditing("training")} />
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            size={18}
+            color={HomeColors.textSecondary}
+            strokeWidth={2}
+          />
+        </TouchableOpacity>
 
-        <View style={styles.card}>
-          <Row label="Objetivo" value={labelOf(goalOptions, profile.goal)} />
-          <Row
-            label="Qué quieres conseguir"
-            value={profile.goal_notes || "—"}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => setEditing("training")}
+          style={styles.planButton}
+        >
+          <View style={styles.planIcon}>
+            <HugeiconsIcon
+              icon={Dumbbell01Icon}
+              size={19}
+              color={HomeColors.primary}
+              strokeWidth={2}
+            />
+          </View>
+
+          <View style={styles.planText}>
+            <Text style={styles.planTitle}>Entrenamiento</Text>
+            <Text style={styles.planSubtitle}>
+              Objetivo, experiencia y disponibilidad
+            </Text>
+          </View>
+
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            size={18}
+            color={HomeColors.textSecondary}
+            strokeWidth={2}
           />
-          <Row
-            label="Prioridad"
-            value={labelsOf(focusAreaOptions, profile.focus_areas)}
-          />
-          <Row
-            label="Experiencia"
-            value={labelOf(experienceOptions, profile.experience)}
-          />
-          <Row
-            label="Técnica en básicos"
-            value={labelOf(techniqueOptions, profile.technique_level)}
-          />
-          <Row
-            label="Días que entrenas"
-            value={labelsOf(weekdayOptions, profile.training_days)}
-          />
-          <Row
-            label="Por sesión"
-            value={
-              profile.session_minutes ? `${profile.session_minutes} min` : "—"
-            }
-          />
-          <Row
-            label="Dónde entrenas"
-            value={labelOf(equipmentOptions, profile.equipment)}
-          />
-          <Row
-            label="Otro deporte"
-            value={
-              profile.sport && profile.sport !== "ninguno"
-                ? `${labelOf(sportOptions, profile.sport)}${
-                    profile.sport_days ? ` · ${profile.sport_days} d/sem` : ""
-                  }`
-                : labelOf(sportOptions, profile.sport)
-            }
-          />
-          <Row label="Cardio" value={labelOf(cardioOptions, profile.cardio)} />
-          <Row
-            label="Actividad diaria"
-            value={labelOf(dailyActivityOptions, profile.daily_activity)}
-          />
-          <Row
-            label="Sueño"
-            value={profile.sleep_hours ? `${profile.sleep_hours} h` : "—"}
-          />
-          <Row
-            label="Limitaciones"
-            value={profile.limitations || "Ninguna"}
-          />
-          <Row
-            label="No quiere hacer"
-            value={profile.avoid_exercises || "Nada"}
-            last
-          />
-        </View>
+        </TouchableOpacity>
 
         {/* --------------------------------------------------------- avisos */}
         <Text style={styles.sectionAlone}>Avisos</Text>
@@ -475,50 +426,15 @@ export function ProfileScreen() {
           update.mutate(values, { onSuccess: () => setEditing(null) })
         }
       />
+
+      <TrainingHistoryModal
+        visible={historyVisible}
+        trainingDates={history.data ?? []}
+        loading={history.isPending}
+        error={history.error ? errorMessage(history.error) : undefined}
+        onClose={() => setHistoryVisible(false)}
+      />
     </SafeAreaView>
-  );
-}
-
-function Section({ title, onEdit }: { title: string; onEdit: () => void }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={onEdit}
-        hitSlop={8}
-        style={styles.edit}
-        accessibilityLabel={`Editar ${title}`}
-      >
-        <HugeiconsIcon
-          icon={PencilEdit02Icon}
-          size={13}
-          color={HomeColors.primary}
-          strokeWidth={2}
-        />
-        <Text style={styles.editText}>Editar</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-function Row({
-  label,
-  value,
-  last,
-}: {
-  label: string;
-  value: string;
-  last?: boolean;
-}) {
-  return (
-    <View style={[styles.row, last && styles.rowLast]}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue} numberOfLines={2}>
-        {value}
-      </Text>
-    </View>
   );
 }
 
@@ -633,17 +549,6 @@ const styles = StyleSheet.create({
 
   statLabel: { marginTop: 3, fontSize: 11, color: HomeColors.textSecondary },
 
-  section: {
-    marginTop: 30,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: HomeColors.text },
-
-  // Sin botón de editar al lado: se ajusta en la propia tarjeta.
   sectionAlone: {
     marginTop: 30,
     marginBottom: 12,
@@ -680,43 +585,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: 13,
     color: HomeColors.textSecondary,
-  },
-
-  edit: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: HomeColors.primarySoft,
-  },
-
-  editText: { fontSize: 12, fontWeight: "700", color: HomeColors.primary },
-
-  card: { borderRadius: 20, backgroundColor: HomeColors.surface },
-
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HomeColors.border,
-  },
-
-  rowLast: { borderBottomWidth: 0 },
-
-  rowLabel: { fontSize: 14, color: HomeColors.textSecondary },
-
-  rowValue: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    color: HomeColors.text,
-    textAlign: "right",
   },
 
   signOut: {

@@ -46,6 +46,7 @@ export async function recordWeight(
 }
 
 export interface WeekSession {
+  id: string;
   startedAt: string;
   finishedAt: string | null;
   /**
@@ -72,7 +73,7 @@ export async function fetchRecentSessions(
 
   const { data, error } = await supabase
     .from("workout_sessions")
-    .select("started_at, finished_at, plan_id")
+    .select("id, started_at, finished_at, plan_id")
     .eq("user_id", userId)
     .gte("started_at", since.toISOString())
     .order("started_at", { ascending: true });
@@ -80,10 +81,61 @@ export async function fetchRecentSessions(
   if (error) throw error;
 
   return (data ?? []).map((row) => ({
+    id: row.id,
     startedAt: row.started_at,
     finishedAt: row.finished_at,
     planId: row.plan_id,
-  }));
+}));
+}
+
+export interface CompletedWorkoutExercise {
+  exerciseId: string;
+  name: string;
+  muscleGroup: string;
+  sets: { number: number; weightKg: number; reps: number }[];
+}
+
+/** Las series que se registraron de verdad en una sesión ya terminada. */
+export async function fetchCompletedWorkout(
+  sessionId: string
+): Promise<CompletedWorkoutExercise[]> {
+  const { data, error } = await supabase
+    .from("session_sets")
+    .select("exercise_id, set_number, weight_kg, reps, exercises ( name, muscle_group )")
+    .eq("session_id", sessionId)
+    .order("completed_at", { ascending: true });
+
+  if (error) throw error;
+
+  const exercises = new Map<string, CompletedWorkoutExercise>();
+
+  for (const row of data ?? []) {
+    const exercise = row.exercises as unknown as {
+      name: string;
+      muscle_group: string;
+    } | null;
+    if (!exercise) continue;
+
+    const existing = exercises.get(row.exercise_id);
+    const set = {
+      number: row.set_number,
+      weightKg: Number(row.weight_kg),
+      reps: row.reps,
+    };
+
+    if (existing) {
+      existing.sets.push(set);
+    } else {
+      exercises.set(row.exercise_id, {
+        exerciseId: row.exercise_id,
+        name: exercise.name,
+        muscleGroup: exercise.muscle_group,
+        sets: [set],
+      });
+    }
+  }
+
+  return [...exercises.values()];
 }
 
 export interface TrainingStats {

@@ -183,32 +183,32 @@ const styles = StyleSheet.create({
     color: HomeColors.textTertiary,
   },
 
-  list: { gap: 8 },
+  list: { gap: 10 },
   participantsLoading: { marginVertical: 10 },
 
   person: {
-    minHeight: 66,
+    minHeight: 78,
     flexDirection: "row",
     alignItems: "center",
-    gap: 11,
-    paddingHorizontal: 14,
-    paddingVertical: 15,
-    borderRadius: 16,
+    gap: 13,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    borderRadius: 18,
     backgroundColor: HomeColors.surface,
   },
 
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: HomeColors.surfaceElevated,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  avatarText: { fontSize: 13, fontWeight: "700", color: HomeColors.textSecondary },
+  avatarText: { fontSize: 15, fontWeight: "700", color: HomeColors.textSecondary },
 
-  personName: { flex: 1, fontSize: 15, fontWeight: "600", color: HomeColors.text },
+  personName: { flex: 1, fontSize: 16, fontWeight: "700", color: HomeColors.text },
   host: { fontSize: 11, fontWeight: "600", color: HomeColors.textTertiary },
 
   warning: {

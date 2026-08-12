@@ -114,7 +114,7 @@ export const STREAK_TIERS: StreakTier[] = [
     hint: "Ya es una rutina, no una excepción.",
     background: Colors.orangeSoft,
     border: "rgba(255,159,10,0.72)",
-    flame: Colors.orange,
+    flame: Colors.orangeStrong,
     text: "#FFC24D",
     glow: Colors.orange,
     glowOpacity: 0.35,

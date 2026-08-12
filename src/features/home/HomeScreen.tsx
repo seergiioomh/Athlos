@@ -17,7 +17,7 @@ import { WorkoutHistory } from "./components/WorkoutHistory";
 import { HomeColors } from "./home-theme";
 import { levelFromStats } from "./level";
 import {
-  useDayPlan,
+  useCompletedWorkout,
   useRecentSessions,
   useTrainingStats,
   useWeightHistory,
@@ -46,12 +46,12 @@ export function HomeScreen() {
 
   /** Día tocado en "Esta semana", si lo hay. */
   const [viewingDay, setViewingDay] = useState<{
-    planId: string;
+    sessionId: string;
     date: Date;
   } | null>(null);
 
-  const { data: viewingPlan, isPending: viewingPlanPending } = useDayPlan(
-    viewingDay?.planId ?? null
+  const { data: viewingWorkout, isPending: viewingWorkoutPending } = useCompletedWorkout(
+    viewingDay?.sessionId ?? null
   );
 
   const name = profile?.display_name ?? "";
@@ -101,15 +101,10 @@ export function HomeScreen() {
         onPress={() => router.push("/(tabs)/workout")}
       />
 
-      {/* Debajo del entrenamiento y encima del historial: importa a diario
-          mientras dura, pero nunca por encima de lo que toca hoy. Se pinta
-          sola solo si hay una batalla activa. */}
-      <BattleCard onPress={() => router.push("/batallas")} />
-
       <WorkoutHistory
         sessions={sessions ?? []}
         onPress={() => router.push("/(tabs)/progress")}
-        onSelectDay={(planId, date) => setViewingDay({ planId, date })}
+        onSelectDay={(sessionId, date) => setViewingDay({ sessionId, date })}
       />
 
       <View style={styles.metricsRow}>
@@ -131,6 +126,10 @@ export function HomeScreen() {
         />
       </View>
 
+      {/* Tras evolución y nivel: sigue visible durante la batalla, pero sin
+          interrumpir el entrenamiento de hoy ni el resumen de la semana. */}
+      <BattleCard onPress={() => router.push("/batallas")} />
+
         <CoachInsightCard
           sessionsThisWeek={sessions?.length ?? 0}
           targetDays={profile?.days_per_week ?? null}
@@ -139,9 +138,9 @@ export function HomeScreen() {
       </ScrollView>
 
       <PastWorkoutSheet
-        plan={viewingPlan ?? null}
+        workout={viewingWorkout ?? null}
         date={viewingDay?.date ?? null}
-        loading={viewingPlanPending}
+        loading={viewingWorkoutPending}
         visible={Boolean(viewingDay)}
         onClose={() => setViewingDay(null)}
       />
