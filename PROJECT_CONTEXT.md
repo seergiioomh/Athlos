@@ -297,15 +297,15 @@ serie suelta a propósito: se premia la constancia, no el volumen. Los rangos
 van de Principiante a Élite.
 
 **Rachas** (`src/features/progress/streak-tiers.ts`). Once niveles, de 0 a 250
-días: Sin racha, Chispa, Encendido, En marcha, Imparable, Al rojo, Oro,
-Esmeralda, Llama azul, Leyenda, Mítico. Cuanto más alta, más llamativa —el
+días: Sin racha, Calentando, Rodaje, Constante, Hábito, Veterano, Máquina,
+Bestia, Titán, Élite, Leyenda. Cuanto más alta, más llamativa —el
 último es multicolor—. La idea es que el número motive.
 
 **Propuestas del coach.** El coach nunca escribe en la base de datos: devuelve
 una propuesta que se guarda y se muestra, y la app la aplica con los permisos
 del usuario cuando él confirma.
 
-**Logros** (`src/features/achievements/definitions.ts`). Veintiocho hitos en
+**Logros** (`src/features/achievements/definitions.ts`). Treinta y nueve hitos en
 siete familias. Son la tercera capa de motivación y cada una mide algo distinto:
 el **nivel** cuánto llevas hecho, la **racha** cuánto de seguido, y los
 **logros** momentos concretos con nombre ("100 kg en una serie") que los otros

@@ -37,13 +37,10 @@ export const FAMILIES = [
   { key: "volumen", label: "Volumen", color: Colors.blue },
   { key: "exploracion", label: "Exploración", color: Colors.teal },
   { key: "momentos", label: "Momentos", color: Colors.purple },
-  /**
-   * El rojo sale de la propia escala de rachas: es el color del escalón
-   * "Imparable" en `streak-tiers`. No es el rojo de error aunque comparta
-   * valor, y por eso esta familia no lo hereda del resto de la interfaz.
-   */
+  /** El rojo sale de la propia escala de rachas, no de un estado de error. */
   { key: "rachas", label: "Rachas", color: Colors.error },
-  { key: "batallas", label: "Batallas", color: Colors.orange },
+  // El naranja identifica el avance de la racha; las batallas usan azul.
+  { key: "batallas", label: "Batallas", color: Colors.blue },
 ] as const;
 
 export type FamilyKey = (typeof FAMILIES)[number]["key"];
@@ -276,10 +273,18 @@ export const ACHIEVEMENTS: Achievement[] = [
   //
   // Los nombres son los de `streak-tiers` a propósito: el logro ES el escalón,
   // y dos nombres distintos para lo mismo obligarían a aprenderse ambos.
-  // "Chispa" (1) se queda fuera porque la cubre "El primero".
+  {
+    slug: "racha-calentando",
+    name: "Calentando",
+    hint: "Encadena tu primer entrenamiento sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 1,
+    icon: "flame",
+  },
   {
     slug: "racha-encendido",
-    name: "Encendido",
+    name: "Rodaje",
     hint: "Encadena 3 entrenamientos sin romper la racha.",
     family: "rachas",
     metric: "bestStreak",
@@ -288,7 +293,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     slug: "racha-en-marcha",
-    name: "En marcha",
+    name: "Constante",
     hint: "Encadena 6 entrenamientos sin romper la racha.",
     family: "rachas",
     metric: "bestStreak",
@@ -297,7 +302,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     slug: "racha-imparable",
-    name: "Imparable",
+    name: "Hábito",
     hint: "Encadena 10 entrenamientos sin romper la racha.",
     family: "rachas",
     metric: "bestStreak",
@@ -306,7 +311,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     slug: "racha-al-rojo",
-    name: "Al rojo",
+    name: "Veterano",
     hint: "Encadena 18 entrenamientos sin romper la racha.",
     family: "rachas",
     metric: "bestStreak",
@@ -315,7 +320,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     slug: "racha-oro",
-    name: "Oro",
+    name: "Máquina",
     hint: "Encadena 30 entrenamientos sin romper la racha.",
     family: "rachas",
     metric: "bestStreak",
@@ -324,7 +329,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     slug: "racha-esmeralda",
-    name: "Esmeralda",
+    name: "Bestia",
     hint: "Encadena 50 entrenamientos sin romper la racha.",
     family: "rachas",
     metric: "bestStreak",
@@ -333,7 +338,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     slug: "racha-llama-azul",
-    name: "Llama azul",
+    name: "Titán",
     hint: "Encadena 85 entrenamientos sin romper la racha.",
     family: "rachas",
     metric: "bestStreak",
@@ -342,7 +347,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     slug: "racha-leyenda",
-    name: "Leyenda",
+    name: "Élite",
     hint: "Encadena 150 entrenamientos sin romper la racha.",
     family: "rachas",
     metric: "bestStreak",
@@ -351,7 +356,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     slug: "racha-mitico",
-    name: "Mítico",
+    name: "Leyenda",
     hint: "Encadena 250 entrenamientos sin romper la racha.",
     family: "rachas",
     metric: "bestStreak",

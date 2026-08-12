@@ -30,8 +30,8 @@ export interface StreakTier {
 export const STREAK_TIERS: StreakTier[] = [
   {
     from: 250,
-    name: "Mítico",
-    hint: "Doscientos cincuenta. Ya no hay escalón por encima.",
+    name: "Leyenda",
+    hint: "Doscientos cincuenta. Ya eres historia de ATHLOS.",
     // Iridiscente: recorre toda la escala anterior de golpe, del lima del
     // principio al azul del final.
     gradient: [Colors.primary, "#FF2D95", Colors.purple, "#22D3EE"],
@@ -44,7 +44,7 @@ export const STREAK_TIERS: StreakTier[] = [
   },
   {
     from: 150,
-    name: "Leyenda",
+    name: "Élite",
     hint: "Ciento cincuenta seguidos. Esto ya no lo hace casi nadie.",
     background: "#2A1040",
     border: "#C084FC",
@@ -55,8 +55,8 @@ export const STREAK_TIERS: StreakTier[] = [
   },
   {
     from: 85,
-    name: "Llama azul",
-    hint: "Ochenta y cinco sin fallar. El fuego más caliente.",
+    name: "Titán",
+    hint: "Ochenta y cinco sin fallar. Tu constancia ya pesa mucho.",
     background: "#10243F",
     border: "#4DA6FF",
     flame: "#7FC4FF",
@@ -66,7 +66,7 @@ export const STREAK_TIERS: StreakTier[] = [
   },
   {
     from: 50,
-    name: "Esmeralda",
+    name: "Bestia",
     hint: "Cincuenta entrenamientos. Ya no dependes de las ganas.",
     background: "#0B3B2E",
     border: "#34D399",
@@ -77,7 +77,7 @@ export const STREAK_TIERS: StreakTier[] = [
   },
   {
     from: 30,
-    name: "Oro",
+    name: "Máquina",
     hint: "Treinta seguidos. Esto ya no es motivación, es hábito.",
     background: "#6A3A05",
     border: "#FFC24D",
@@ -88,7 +88,7 @@ export const STREAK_TIERS: StreakTier[] = [
   },
   {
     from: 18,
-    name: "Al rojo",
+    name: "Veterano",
     hint: "Dieciocho seguidos. Ahora sí que se nota.",
     background: Colors.pinkSoft,
     border: Colors.pink,
@@ -99,7 +99,7 @@ export const STREAK_TIERS: StreakTier[] = [
   },
   {
     from: 10,
-    name: "Imparable",
+    name: "Hábito",
     hint: "Diez seguidos. Aguanta el ritmo.",
     background: Colors.errorSoft,
     border: Colors.error,
@@ -110,7 +110,7 @@ export const STREAK_TIERS: StreakTier[] = [
   },
   {
     from: 6,
-    name: "En marcha",
+    name: "Constante",
     hint: "Ya es una rutina, no una excepción.",
     background: Colors.orangeSoft,
     border: "rgba(255,159,10,0.72)",
@@ -121,7 +121,7 @@ export const STREAK_TIERS: StreakTier[] = [
   },
   {
     from: 3,
-    name: "Encendido",
+    name: "Rodaje",
     hint: "Tres seguidos. Lo difícil ya pasó.",
     background: Colors.primarySoft,
     border: "rgba(198,244,50,0.48)",
@@ -132,7 +132,7 @@ export const STREAK_TIERS: StreakTier[] = [
   },
   {
     from: 1,
-    name: "Chispa",
+    name: "Calentando",
     hint: "Ha empezado. Vuelve pronto y no la pierdas.",
     background: Colors.surface,
     border: "rgba(198,244,50,0.22)",
