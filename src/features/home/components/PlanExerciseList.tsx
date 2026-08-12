@@ -18,9 +18,9 @@ const formatRest = (seconds: number) =>
 /**
  * La lista de ejercicios de un plan, con sus objetivos.
  *
- * Compartida entre la vista previa del entrenamiento por preparar
- * (`WorkoutPreviewSheet`) y la de un día ya hecho (`PastWorkoutSheet`): la
- * fila es idéntica en las dos, solo cambia lo que envuelve a la lista.
+ * Se usa en la vista previa del entrenamiento por preparar. Los días ya
+ * terminados tienen su propia lista, porque muestran las series reales y no
+ * estos objetivos.
  */
 export function PlanExerciseList({ exercises }: Props) {
   return (
@@ -105,10 +105,22 @@ const styles = StyleSheet.create({
 
   separator: { fontSize: 13, color: HomeColors.textSecondary },
 
+  /**
+   * La nota del entrenador iba en lima a plena saturación. Como distintivo
+   * pequeño el lima funciona; como párrafo de varias líneas cansa la vista y
+   * compite con el botón de empezar, que es lo único que debería destacar
+   * tanto.
+   *
+   * Ahora se distingue por el fondo y no por el color de la letra.
+   */
   note: {
     marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: HomeColors.surfaceElevated,
     fontSize: 12,
     lineHeight: 17,
-    color: HomeColors.primary,
+    color: HomeColors.textSecondary,
   },
 });
