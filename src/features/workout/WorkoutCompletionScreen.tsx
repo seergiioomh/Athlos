@@ -19,6 +19,9 @@ import {
   View,
 } from "react-native";
 
+import { AchievementBadge } from "@/features/achievements/components/AchievementBadge";
+import { achievementBySlug, familyColor } from "@/features/achievements/definitions";
+import { useSyncAchievements } from "@/features/achievements/queries";
 import { HomeColors } from "@/features/home/home-theme";
 import { CoachInsightCard } from "@/features/home/components/CoachInsightCard";
 import { useRecentSessions } from "@/features/home/queries";
@@ -28,6 +31,13 @@ import { errorMessage } from "@/utils/errors";
 import {
   useSaveSessionFeedback,
 } from "./queries";
+
+/**
+ * Cuántos logros se enseñan al terminar. Casi siempre caerá uno o ninguno,
+ * pero la primera vez se guarda el historial entero de golpe y la tarjeta se
+ * convertiría en un muro de veinte medallas.
+ */
+const MAX_LOGROS_VISIBLES = 3;
 
 interface Props {
   sessionId: string;
@@ -47,10 +57,39 @@ export function WorkoutCompletionScreen({
   const [energy, setEnergy] = useState<number | null>(null);
   const [rating, setRating] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
+  const [nuevosLogros, setNuevosLogros] = useState<string[]>([]);
+
+  const sync = useSyncAchievements();
+  const { mutateAsync: syncAchievements } = sync;
 
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, []);
+
+  /**
+   * Los logros se comprueban al entrar, no al guardar: es terminar el
+   * entrenamiento lo que los desbloquea, y el usuario tiene que verlos aunque
+   * se vaya sin contestar a las sensaciones.
+   *
+   * Si falla no se dice nada. Un logro que no se guarda se recupera solo la
+   * próxima vez, y no merece ensuciar la pantalla de haber terminado bien.
+   */
+  useEffect(() => {
+    let vigente = true;
+
+    syncAchievements()
+      .then((nuevos) => {
+        if (!vigente || nuevos.length === 0) return;
+
+        setNuevosLogros(nuevos);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      })
+      .catch(() => {});
+
+    return () => {
+      vigente = false;
+    };
+  }, [syncAchievements]);
 
   const select = (value: number, setter: (value: number) => void) => {
     setter(value);
@@ -109,6 +148,42 @@ export function WorkoutCompletionScreen({
           <Text style={styles.streakHint}>La constancia se nota.</Text>
         </View>
       </View>
+
+      {/* Solo si hay algo que celebrar. Una tarjeta vacía de "0 logros
+          nuevos" restaría en vez de sumar. */}
+      {nuevosLogros.length > 0 && (
+        <View style={styles.unlockedCard}>
+          <Text style={styles.unlockedTitle}>
+            {nuevosLogros.length === 1
+              ? "¡Logro desbloqueado!"
+              : `¡${nuevosLogros.length} logros desbloqueados!`}
+          </Text>
+
+          {nuevosLogros.slice(0, MAX_LOGROS_VISIBLES).map((slug) => {
+            const logro = achievementBySlug(slug);
+            if (!logro) return null;
+
+            const color = familyColor(logro.family);
+
+            return (
+              <View key={slug} style={styles.unlockedRow}>
+                <AchievementBadge icon={logro.icon} color={color} unlocked size={48} />
+
+                <View style={styles.unlockedCopy}>
+                  <Text style={styles.unlockedName}>{logro.name}</Text>
+                  <Text style={styles.unlockedHint}>{logro.hint}</Text>
+                </View>
+              </View>
+            );
+          })}
+
+          {nuevosLogros.length > MAX_LOGROS_VISIBLES && (
+            <Text style={styles.unlockedMore}>
+              y {nuevosLogros.length - MAX_LOGROS_VISIBLES} más en tu perfil
+            </Text>
+          )}
+        </View>
+      )}
 
       <SectionCard icon={Message01Icon} color={HomeColors.primary} title="¿Cómo ha ido?">
         <Text style={styles.sectionDescription}>
@@ -240,6 +315,13 @@ const styles = StyleSheet.create({
   streakLabel: { fontSize: 13, color: HomeColors.textSecondary },
   streakValue: { marginTop: 2, fontSize: 22, fontWeight: "800", color: HomeColors.text, fontVariant: ["tabular-nums"] },
   streakHint: { marginTop: 2, fontSize: 13, color: HomeColors.primary },
+  unlockedCard: { gap: 12, padding: 16, borderRadius: 22, backgroundColor: HomeColors.surface, borderCurve: "continuous", borderWidth: 1, borderColor: HomeColors.primary },
+  unlockedTitle: { fontSize: 16, fontWeight: "800", color: HomeColors.primary },
+  unlockedRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  unlockedCopy: { flex: 1 },
+  unlockedName: { fontSize: 15, fontWeight: "700", color: HomeColors.text },
+  unlockedHint: { marginTop: 1, fontSize: 12, color: HomeColors.textSecondary },
+  unlockedMore: { fontSize: 12, fontWeight: "600", color: HomeColors.textSecondary },
   card: { padding: 18, borderRadius: 24, backgroundColor: HomeColors.surface, borderCurve: "continuous" },
   cardTitle: { flexDirection: "row", alignItems: "center", gap: 10 },
   cardHeading: { flex: 1, fontSize: 21, fontWeight: "700", color: HomeColors.text },

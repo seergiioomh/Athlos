@@ -119,6 +119,7 @@ function RootNavigator() {
         {/* Se abren encima de las pestañas, no son pestañas más. */}
         <Stack.Screen name="weekly-plan" />
         <Stack.Screen name="rachas" />
+        <Stack.Screen name="logros" />
         {/* Un entrenamiento compartido se guarda en la cuenta de quien lo
             recibe, así que hace falta sesión: va en la zona protegida y no
             junto a los enlaces del correo. */}

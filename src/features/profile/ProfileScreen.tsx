@@ -1,6 +1,7 @@
 import {
   ArrowRight01Icon,
   Calendar03Icon,
+  ChampionIcon,
   PencilEdit02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
@@ -20,6 +21,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { StreakBadge } from "@/components/ui/StreakBadge";
 import { signOut, useSession } from "@/features/auth/session";
+import { ACHIEVEMENTS, earnedSlugs } from "@/features/achievements/definitions";
+import { useAchievementMetrics } from "@/features/achievements/queries";
 import { HomeColors } from "@/features/home/home-theme";
 import { EXP_PER_LEVEL, levelFromStats } from "@/features/home/level";
 import { useProfile } from "@/features/onboarding/queries";
@@ -108,6 +111,7 @@ export function ProfileScreen() {
   const { data: summary } = useProgressSummary();
   const { data: streak, error: streakError } = useStreak();
   const { data: split } = useActiveCycle();
+  const { data: achievementMetrics } = useAchievementMetrics();
   const { email } = useSession();
   const update = useUpdateProfile();
   const remove = useDeleteAccount();
@@ -251,6 +255,39 @@ export function ProfileScreen() {
             <Text style={styles.planTitle}>Mi plan semanal</Text>
             <Text style={styles.planSubtitle}>
               {split ? split.name : "Sin diseñar todavía"}
+            </Text>
+          </View>
+
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            size={18}
+            color={HomeColors.textSecondary}
+            strokeWidth={2}
+          />
+        </TouchableOpacity>
+
+        {/* Junto al plan y no en Progreso: aquí es donde ya vive el resto de
+            la gamificación —nivel y racha—, y se buscan en el mismo sitio. */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push("/logros")}
+          style={styles.planButton}
+        >
+          <View style={styles.planIcon}>
+            <HugeiconsIcon
+              icon={ChampionIcon}
+              size={19}
+              color={HomeColors.primary}
+              strokeWidth={2}
+            />
+          </View>
+
+          <View style={styles.planText}>
+            <Text style={styles.planTitle}>Logros</Text>
+            <Text style={styles.planSubtitle}>
+              {achievementMetrics
+                ? `${earnedSlugs(achievementMetrics).length} de ${ACHIEVEMENTS.length} conseguidos`
+                : "Momentos que solo se consiguen una vez"}
             </Text>
           </View>
 
