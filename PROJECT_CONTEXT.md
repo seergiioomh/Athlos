@@ -63,8 +63,8 @@ Acceso y registro · bienvenida en 7 pasos · inicio con el entrenamiento del d�
 · pantalla de entrenamiento con objetivos y registro de series · pantalla de
 fin de entrenamiento con resumen y sensaciones · chat con el coach y propuestas
 aplicables · progreso con peso, actividad comparada y marcas por grupo · perfil
-· ciclo de entrenamiento · pantalla de rachas · compartir un entrenamiento por
-enlace · recordatorios push.
+· ciclo de entrenamiento · pantalla de rachas · logros · compartir un
+entrenamiento por enlace · recordatorios push.
 
 ### Configuración viva
 
@@ -75,7 +75,7 @@ enlace · recordatorios push.
 | Supabase, *Redirect URLs* | `athlos://confirm` y `athlos://reset-password` |
 | Supabase, SMTP | El de serie. Pocos correos por hora y **plantillas no editables** |
 | Supabase, registros | Permitidos |
-| Supabase, migraciones | Aplicadas hasta `0033` |
+| Supabase, migraciones | Aplicadas hasta `0034` |
 | Supabase, funciones | Cuatro desplegadas |
 | Supabase, extensiones | `pg_cron` y `pg_net` activas, cron `enviar-recordatorios` cada hora |
 | Supabase, secretos | `ANTHROPIC_API_KEY` y `CRON_SECRET` |
@@ -119,6 +119,7 @@ app/                     rutas (expo-router, enrutado por archivos)
   (tabs)/                inicio · entrenamiento · coach · progreso · perfil
   weekly-plan.tsx        ciclo de entrenamiento, encima de las pestañas
   rachas.tsx             detalle de la racha, encima de las pestañas
+  logros.tsx             la vitrina de logros, encima de las pestañas
   shared-workout.tsx     entrenamiento recibido por enlace (exige sesión)
 
 src/
@@ -238,6 +239,18 @@ Esmeralda, Llama azul, Leyenda, Mítico. Cuanto más alta, más llamativa —el
 una propuesta que se guarda y se muestra, y la app la aplica con los permisos
 del usuario cuando él confirma.
 
+**Logros** (`src/features/achievements/definitions.ts`). Veinticuatro hitos en
+seis familias. Son la tercera capa de motivación y cada una mide algo distinto:
+el **nivel** cuánto llevas hecho, la **racha** cuánto de seguido, y los
+**logros** momentos concretos con nombre ("100 kg en una serie") que los otros
+dos no saben expresar. Si alguna vez se añade una cuarta, que mida algo que no
+midan estas.
+
+Lo conseguido lo dicen **las métricas**, no la tabla; `user_achievements` solo
+guarda cuándo. Al revés, los logros que el historial ya cumplía antes de que
+existieran salían bloqueados enseñando "1 / 1", porque nunca hubo una fila que
+los registrara. Por eso los antiguos aparecen como "Conseguido" sin fecha.
+
 **Recordatorios push.** A quién avisar lo decide `users_to_remind()` en
 Postgres, no la Edge Function: es la única que puede mirar a todos los usuarios
 de una vez y cruzar sus días de entrenamiento, su hora elegida y su historial.
@@ -356,10 +369,16 @@ Tablas, todas con RLS por `auth.uid()` (verificado):
 | `coach_messages` | Conversación y propuestas. Caduca a los 5 días |
 | `weekly_splits` | El ciclo de entrenamiento. **El nombre es histórico**: guarda ciclos, no repartos por día de la semana |
 | `push_tokens` | Un móvil registrado para avisos. La clave es el token, no el usuario: una persona puede tener varios |
+| `user_achievements` | Cuándo se desbloqueó cada logro. Solo la fecha: si está conseguido lo dicen las métricas |
 
 Funciones: `progress_summary`, `progress_period_summary`, `exercise_progress`,
-`workout_streak`, `approve_training_cycle`, `users_to_remind`, `import_session`,
-`prune_coach_messages`, `handle_new_user`, `delete_account`.
+`workout_streak`, `approve_training_cycle`, `users_to_remind`,
+`achievement_metrics`, `import_session`, `prune_coach_messages`,
+`handle_new_user`, `delete_account`.
+
+`user_achievements` no tiene políticas de `update` ni `delete` a propósito: un
+logro conseguido no se edita ni se retira, y que la política no exista es la
+forma de dejarlo escrito.
 
 `delete_account()` es `security definer` y **no recibe parámetros**: saca al
 usuario de `auth.uid()`, igual que las Edge Functions lo sacan del token.
