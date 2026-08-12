@@ -243,7 +243,7 @@ export function ProfileScreen() {
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => router.push("/weekly-plan")}
-          style={styles.planButton}
+          style={[styles.planButton, styles.planButtonFirst]}
         >
           <View style={styles.planIcon}>
             <HugeiconsIcon
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   },
 
   planButton: {
-    marginTop: 24,
+    marginTop: 10,
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
@@ -661,6 +661,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: HomeColors.surface,
   },
+  planButtonFirst: { marginTop: 24 },
 
   planIcon: {
     width: 38,

@@ -24,7 +24,11 @@ interface Props {
 }
 
 export function BattleLobby({ battle, meId }: Props) {
-  const { data: participants } = useBattleParticipants(battle.id);
+  const {
+    data: participants,
+    isPending: participantsPending,
+    error: participantsError,
+  } = useBattleParticipants(battle.id);
   const start = useStartBattle();
   const cancel = useCancelBattle();
   const leave = useLeaveBattle();
@@ -42,7 +46,7 @@ export function BattleLobby({ battle, meId }: Props) {
     }
   };
 
-  const error = start.error ?? cancel.error ?? leave.error;
+  const error = participantsError ?? start.error ?? cancel.error ?? leave.error;
 
   return (
     <View style={styles.container}>
@@ -68,6 +72,9 @@ export function BattleLobby({ battle, meId }: Props) {
         {cuantos} {cuantos === 1 ? "participante" : "participantes"}
       </Text>
 
+      {participantsPending ? (
+        <ActivityIndicator style={styles.participantsLoading} color={HomeColors.primary} />
+      ) : (
       <View style={styles.list}>
         {(participants ?? []).map((person) => (
           <View key={person.userId} style={styles.person}>
@@ -78,11 +85,12 @@ export function BattleLobby({ battle, meId }: Props) {
               {person.userId === meId ? "Tú" : person.displayName}
             </Text>
             {person.userId === battle.createdBy && (
-              <Text style={styles.host}>organiza</Text>
+                <Text style={styles.host}>creador</Text>
             )}
           </View>
         ))}
       </View>
+      )}
 
       {soyElCreador ? (
         <>
@@ -124,9 +132,9 @@ export function BattleLobby({ battle, meId }: Props) {
             activeOpacity={0.8}
             disabled={leave.isPending}
             onPress={() => leave.mutate(battle.id)}
-            style={styles.ghost}
+            style={[styles.leave, leave.isPending && styles.leaveOff]}
           >
-            <Text style={styles.ghostText}>Salir</Text>
+            <Text style={styles.leaveText}>Salir</Text>
           </TouchableOpacity>
         </>
       )}
@@ -176,12 +184,15 @@ const styles = StyleSheet.create({
   },
 
   list: { gap: 8 },
+  participantsLoading: { marginVertical: 10 },
 
   person: {
+    minHeight: 66,
     flexDirection: "row",
     alignItems: "center",
     gap: 11,
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 15,
     borderRadius: 16,
     backgroundColor: HomeColors.surface,
   },
@@ -220,6 +231,18 @@ const styles = StyleSheet.create({
 
   ghost: { height: 46, alignItems: "center", justifyContent: "center" },
   ghostText: { fontSize: 14, fontWeight: "600", color: HomeColors.textSecondary },
+
+  leave: {
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: HomeColors.error,
+    backgroundColor: HomeColors.errorSoft,
+  },
+  leaveOff: { opacity: 0.5 },
+  leaveText: { fontSize: 14, fontWeight: "700", color: HomeColors.errorText },
 
   error: { fontSize: 12, color: HomeColors.errorText, textAlign: "center" },
 });

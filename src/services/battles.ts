@@ -97,18 +97,13 @@ export async function fetchParticipants(
   battleId: string
 ): Promise<{ userId: string; displayName: string }[]> {
   const { data, error } = await supabase
-    .from("battle_participants")
-    .select("user_id, profiles ( display_name )")
-    .eq("battle_id", battleId)
-    .order("joined_at", { ascending: true });
+    .rpc("battle_lobby_participants", { p_battle: battleId });
 
   if (error) throw error;
 
   return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
     userId: String(row.user_id),
-    displayName:
-      (row.profiles as { display_name: string | null } | null)?.display_name ??
-      "Alguien",
+    displayName: (row.display_name as string | null) ?? "Alguien",
   }));
 }
 

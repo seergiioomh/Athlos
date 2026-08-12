@@ -223,6 +223,17 @@ Deno.serve(async (req: Request) => {
 
   if (!userId) return json({ error: "Sesión no válida" }, 401);
 
+  const quota = await consumeAiUsage(supabase, userId, "coach");
+  if (quota === null) {
+    return json({ error: "No se pudo comprobar tu límite de uso" }, 500);
+  }
+  if (!quota) {
+    return json(
+      { error: "Has alcanzado el límite de 20 mensajes al coach hoy. Vuelve mañana." },
+      429,
+    );
+  }
+
   // Limpieza antes de leer: lo caducado no debe entrar en el contexto ni
   // seguir ocupando la tabla. Es una consulta barata sobre un índice.
   await supabase.rpc("prune_coach_messages", {
@@ -520,6 +531,24 @@ function json(body: unknown, status: number) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+async function consumeAiUsage(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  action: "coach",
+) {
+  const { data, error } = await supabase.rpc("consume_ai_usage", {
+    p_user: userId,
+    p_action: action,
+  });
+
+  if (error) {
+    console.error("Fallo comprobando el límite de IA", error);
+    return null;
+  }
+
+  return data === true;
 }
 
 /** Edad cumplida. Por componentes, no dividiendo milisegundos: los bisiestos

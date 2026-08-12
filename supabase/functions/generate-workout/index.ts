@@ -273,6 +273,17 @@ Deno.serve(async (req: Request) => {
 
   const history = await recentHistory(supabase, userId);
 
+  const quota = await consumeAiUsage(supabase, userId, "workout");
+  if (quota === null) {
+    return json({ error: "No se pudo comprobar tu límite de uso" }, 500);
+  }
+  if (!quota) {
+    return json(
+      { error: "Has alcanzado el límite de 3 entrenamientos generados hoy. Vuelve mañana." },
+      429,
+    );
+  }
+
   const anthropic = new Anthropic({ apiKey: anthropicKey });
 
   let response;
@@ -394,6 +405,24 @@ async function recentHistory(
     .limit(8);
 
   return data ?? [];
+}
+
+async function consumeAiUsage(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  action: "workout",
+) {
+  const { data, error } = await supabase.rpc("consume_ai_usage", {
+    p_user: userId,
+    p_action: action,
+  });
+
+  if (error) {
+    console.error("Fallo comprobando el límite de IA", error);
+    return null;
+  }
+
+  return data === true;
 }
 
 interface CatalogItem {

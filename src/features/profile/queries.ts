@@ -58,9 +58,9 @@ export function useGenerateCycle() {
   return useMutation({
     mutationFn: () => generateCycle(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: splitKeys.active(userId),
-      });
+      // La función crea un borrador, no un ciclo activo. Invalidar ambos evita
+      // que la pantalla conserve en caché el «no hay ciclo» anterior.
+      queryClient.invalidateQueries({ queryKey: ["split"] });
     },
     // Diseñar el reparto cuesta una llamada a la IA: que reintente el usuario.
     retry: false,

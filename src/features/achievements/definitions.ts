@@ -18,6 +18,8 @@ export interface AchievementMetrics {
   weekendSessions: number;
   longSessions: number;
   cycleLaps: number;
+  battlesPlayed: number;
+  battlesWon: number;
 }
 
 export type MetricKey = keyof AchievementMetrics;
@@ -33,6 +35,7 @@ export const FAMILIES = [
   { key: "volumen", label: "Volumen", color: Colors.blue },
   { key: "exploracion", label: "Exploración", color: Colors.teal },
   { key: "momentos", label: "Momentos", color: Colors.purple },
+  { key: "batallas", label: "Batallas", color: Colors.orange },
 ] as const;
 
 export type FamilyKey = (typeof FAMILIES)[number]["key"];
@@ -97,7 +100,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "constancia",
     metric: "sessionsFinished",
     threshold: 10,
-    icon: "flame",
+    icon: "rocket",
   },
   {
     slug: "veinticinco-sesiones",
@@ -106,7 +109,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "constancia",
     metric: "sessionsFinished",
     threshold: 25,
-    icon: "flame",
+    icon: "medal",
   },
   {
     slug: "cincuenta-sesiones",
@@ -124,7 +127,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "constancia",
     metric: "sessionsFinished",
     threshold: 100,
-    icon: "trophy",
+    icon: "crown",
   },
   {
     slug: "vuelta-al-ciclo",
@@ -133,7 +136,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "constancia",
     metric: "cycleLaps",
     threshold: 1,
-    icon: "refresh",
+    icon: "repeat",
   },
   {
     slug: "cinco-vueltas",
@@ -153,7 +156,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "fuerza",
     metric: "maxWeightKg",
     threshold: 60,
-    icon: "weight",
+    icon: "biceps",
   },
   {
     slug: "cien-kilos",
@@ -162,7 +165,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "fuerza",
     metric: "maxWeightKg",
     threshold: 100,
-    icon: "weight",
+    icon: "kettlebell",
   },
   {
     slug: "ciento-cuarenta-kilos",
@@ -191,7 +194,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "volumen",
     metric: "totalVolumeKg",
     threshold: 1000,
-    icon: "chart",
+    icon: "chart-up",
   },
   {
     slug: "diez-toneladas",
@@ -200,7 +203,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "volumen",
     metric: "totalVolumeKg",
     threshold: 10000,
-    icon: "chart",
+    icon: "chart-max",
   },
   {
     slug: "cincuenta-toneladas",
@@ -218,7 +221,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "volumen",
     metric: "totalVolumeKg",
     threshold: 100000,
-    icon: "trophy",
+    icon: "award",
   },
 
   // ---------------------------------------------------------- exploración
@@ -229,7 +232,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "exploracion",
     metric: "distinctExercises",
     threshold: 10,
-    icon: "search",
+    icon: "search-focus",
   },
   {
     slug: "veinticinco-ejercicios",
@@ -238,7 +241,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     family: "exploracion",
     metric: "distinctExercises",
     threshold: 25,
-    icon: "search",
+    icon: "search-visual",
   },
   {
     slug: "cincuenta-ejercicios",
@@ -295,6 +298,44 @@ export const ACHIEVEMENTS: Achievement[] = [
     metric: "longSessions",
     threshold: 1,
     icon: "clock",
+  },
+
+  // ------------------------------------------------------------- batallas
+  {
+    slug: "primer-duelo",
+    name: "Primer duelo",
+    hint: "Participa en tu primera batalla.",
+    family: "batallas",
+    metric: "battlesPlayed",
+    threshold: 1,
+    icon: "sword",
+  },
+  {
+    slug: "habitual-del-ring",
+    name: "Habitual del ring",
+    hint: "Participa en 5 batallas.",
+    family: "batallas",
+    metric: "battlesPlayed",
+    threshold: 5,
+    icon: "flag",
+  },
+  {
+    slug: "primera-victoria",
+    name: "Primera victoria",
+    hint: "Gana una batalla.",
+    family: "batallas",
+    metric: "battlesWon",
+    threshold: 1,
+    icon: "champion",
+  },
+  {
+    slug: "rey-del-ring",
+    name: "Rey del ring",
+    hint: "Gana 3 batallas.",
+    family: "batallas",
+    metric: "battlesWon",
+    threshold: 3,
+    icon: "laurel",
   },
 ];
 

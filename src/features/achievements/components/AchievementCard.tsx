@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { HomeColors } from "@/features/home/home-theme";
 import {
@@ -27,6 +28,7 @@ const formatNumber = (value: number) =>
   value.toLocaleString("es-ES", { maximumFractionDigits: 0 });
 
 export function AchievementCard({ achievement, metrics, unlockedAt }: Props) {
+  const [detailVisible, setDetailVisible] = useState(false);
   const color = familyColor(achievement.family);
 
   const actual = metrics[achievement.metric];
@@ -41,63 +43,97 @@ export function AchievementCard({ achievement, metrics, unlockedAt }: Props) {
   const unlocked = actual >= achievement.threshold;
 
   return (
-    <View
-      style={[
-        styles.card,
-        // Conseguido: borde del color de su familia y un fondo teñido apenas
-        // perceptible. Basta para que la rejilla se lea de un vistazo sin
-        // convertirla en un semáforo.
-        unlocked && { borderColor: color, backgroundColor: `${color}0F` },
-      ]}
-    >
-      <View style={styles.badgeRow}>
-        <AchievementBadge
-          icon={achievement.icon}
-          color={color}
-          unlocked={unlocked}
-        />
-      </View>
-
-      <Text
-        style={[styles.name, !unlocked && styles.nameLocked]}
-        numberOfLines={2}
+    <>
+      <TouchableOpacity
+        activeOpacity={0.82}
+        onPress={() => setDetailVisible(true)}
+        style={[
+          styles.card,
+          // Conseguido: borde del color de su familia y un fondo teñido apenas
+          // perceptible. Basta para que la rejilla se lea de un vistazo sin
+          // convertirla en un semáforo.
+          unlocked && { borderColor: color, backgroundColor: `${color}0F` },
+        ]}
+        accessibilityLabel={`Ver logro: ${achievement.name}`}
       >
-        {achievement.name}
-      </Text>
+        <View style={styles.badgeRow}>
+          <AchievementBadge
+            icon={achievement.icon}
+            color={color}
+            unlocked={unlocked}
+            size={48}
+          />
+        </View>
 
-      {unlocked ? (
-        // Sin fecha mientras no se haya guardado la fila. Se dice igual que
-        // está conseguido: callar dejaría la tarjeta a medias.
-        <Text style={styles.date}>
-          {unlockedAt ? formatDate(unlockedAt) : "Conseguido"}
+        <Text
+          style={[styles.name, !unlocked && styles.nameLocked]}
+          numberOfLines={2}
+        >
+          {achievement.name}
         </Text>
-      ) : (
-        <>
-          <Text style={styles.hint} numberOfLines={3}>
-            {achievement.hint}
-          </Text>
 
-          {/* Cuánto llevas, no solo un candado: "7 de 10" invita a volver.
-              Va abajo del todo para que las barras de una misma fila queden
-              a la misma altura por largo que sea el texto de arriba. */}
-          <View style={styles.footer}>
-            <View style={styles.bar}>
-              <View
-                style={[
-                  styles.barFill,
-                  { width: `${Math.round(progress * 100)}%`, backgroundColor: color },
-                ]}
-              />
-            </View>
+        {unlocked && unlockedAt && (
+          <Text style={styles.date}>{formatDate(unlockedAt)}</Text>
+        )}
+      </TouchableOpacity>
 
-            <Text style={styles.progressText}>
-              {formatNumber(Math.min(actual, achievement.threshold))} /{" "}
-              {formatNumber(achievement.threshold)}
-            </Text>
+      <Modal
+        animationType="fade"
+        transparent
+        visible={detailVisible}
+        onRequestClose={() => setDetailVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setDetailVisible(false)}
+            style={styles.modalBackdrop}
+            accessibilityLabel="Cerrar detalle del logro"
+          />
+
+          <View style={styles.detailCard}>
+            <AchievementBadge
+              icon={achievement.icon}
+              color={color}
+              unlocked={unlocked}
+              size={76}
+            />
+
+            <Text style={styles.detailName}>{achievement.name}</Text>
+            <Text style={styles.detailHint}>{achievement.hint}</Text>
+
+            {unlocked ? (
+              <Text style={styles.detailDate}>
+                {unlockedAt ? `Conseguido el ${formatDate(unlockedAt)}` : "Conseguido"}
+              </Text>
+            ) : (
+              <View style={styles.detailProgress}>
+                <View style={styles.bar}>
+                  <View
+                    style={[
+                      styles.barFill,
+                      { width: `${Math.round(progress * 100)}%`, backgroundColor: color },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.progressText}>
+                  {formatNumber(Math.min(actual, achievement.threshold))} /{" "}
+                  {formatNumber(achievement.threshold)}
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setDetailVisible(false)}
+              style={styles.close}
+            >
+              <Text style={styles.closeText}>Cerrar</Text>
+            </TouchableOpacity>
           </View>
-        </>
-      )}
-    </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -105,7 +141,7 @@ const styles = StyleSheet.create({
   card: {
     flexBasis: "47.8%",
     flexGrow: 1,
-    padding: 14,
+    padding: 12,
     borderRadius: 20,
     backgroundColor: HomeColors.surface,
     borderWidth: 1,
@@ -113,17 +149,17 @@ const styles = StyleSheet.create({
   },
 
   // Todo centrado bajo el emblema, como una medalla en su vitrina.
-  badgeRow: { alignItems: "center", marginBottom: 12 },
+  badgeRow: { alignItems: "center", marginBottom: 8 },
 
   name: {
     fontSize: 15,
-    lineHeight: 19,
+    lineHeight: 18,
     fontWeight: "700",
     color: HomeColors.text,
     textAlign: "center",
     // Sitio para dos líneas siempre. Con nombres de una y de dos conviviendo
     // en la misma fila, todo lo que va debajo bailaba de una tarjeta a otra.
-    minHeight: 38,
+    minHeight: 36,
   },
 
   nameLocked: { color: HomeColors.textSecondary },
@@ -136,18 +172,45 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  hint: {
-    marginTop: 4,
-    marginBottom: 10,
-    fontSize: 11,
-    lineHeight: 15,
-    color: HomeColors.textTertiary,
+  modalOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
+  },
+  detailCard: {
+    width: "100%",
+    maxWidth: 340,
+    alignItems: "center",
+    padding: 24,
+    borderRadius: 26,
+    backgroundColor: HomeColors.surface,
+  },
+  detailName: {
+    marginTop: 14,
+    fontSize: 22,
+    fontWeight: "700",
+    color: HomeColors.text,
     textAlign: "center",
   },
-
-  // `marginTop: auto` es lo que alinea las barras: la tarjeta se estira hasta
-  // la más alta de su fila y el pie se queda pegado abajo en todas.
-  footer: { marginTop: "auto" },
+  detailHint: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    color: HomeColors.textSecondary,
+    textAlign: "center",
+  },
+  detailDate: {
+    marginTop: 16,
+    fontSize: 13,
+    fontWeight: "600",
+    color: HomeColors.textTertiary,
+  },
+  detailProgress: { width: "100%", marginTop: 18 },
 
   bar: {
     height: 4,
@@ -166,4 +229,14 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     textAlign: "center",
   },
+  close: {
+    width: "100%",
+    height: 48,
+    marginTop: 22,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: HomeColors.primary,
+  },
+  closeText: { fontSize: 15, fontWeight: "700", color: HomeColors.onPrimary },
 });

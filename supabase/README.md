@@ -50,6 +50,9 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0036_battle_target_blend.sql` | Corrige el objetivo de la batalla: mezcla lo declarado con lo real |
 | `0037_battle_join.sql` | Batallas: unirse por código, previsualizar, salir y caducar |
 | `0038_battle_close.sql` | Batallas: cierre automático y ganador |
+| `0039_battle_lobby_participants.sql` | Participantes de sala de espera, sin abrir perfiles |
+| `0040_ai_usage_limits.sql` | Límite diario por usuario para las funciones de IA |
+| `0041_battle_achievements.sql` | Métricas y logros de participación y victoria en Batallas |
 
 ### Archivos que no forman parte de la instalación
 

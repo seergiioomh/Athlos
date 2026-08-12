@@ -11,7 +11,7 @@ import {
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { HomeColors } from "@/features/home/home-theme";
 import { errorMessage } from "@/utils/errors";
-import { useCreateBattle, useJoinBattle } from "../queries";
+import { useCreateBattle, useJoinBattle, usePreviewBattle } from "../queries";
 
 const DURATIONS = [
   { value: 7, label: "1 semana" },
@@ -33,9 +33,23 @@ export function BattleEmpty() {
 
   const create = useCreateBattle();
   const join = useJoinBattle();
+  const preview = usePreviewBattle();
 
   const canCreate = name.trim().length > 0 && !create.isPending;
-  const canJoin = code.trim().length === 6 && !join.isPending;
+  const previewIsCurrent = preview.variables === code;
+  const room = previewIsCurrent && !preview.isPending ? preview.data : undefined;
+  const canJoin = room?.status === "lobby" && !join.isPending;
+
+  const onCodeChange = (value: string) => {
+    const nextCode = value.toUpperCase().trim();
+    setCode(nextCode);
+
+    if (nextCode.length === 6) {
+      preview.mutate(nextCode);
+    } else {
+      preview.reset();
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -85,7 +99,7 @@ export function BattleEmpty() {
 
         <TextInput
           value={code}
-          onChangeText={(value) => setCode(value.toUpperCase().trim())}
+          onChangeText={onCodeChange}
           placeholder="K7M2QX"
           placeholderTextColor={HomeColors.textTertiary}
           autoCapitalize="characters"
@@ -95,19 +109,46 @@ export function BattleEmpty() {
           accessibilityLabel="Código de la batalla"
         />
 
-        <TouchableOpacity
-          activeOpacity={0.85}
-          disabled={!canJoin}
-          onPress={() => join.mutate(code.trim())}
-          style={[styles.secondary, !canJoin && styles.secondaryOff]}
-        >
-          {join.isPending ? (
-            <ActivityIndicator color={HomeColors.primary} />
-          ) : (
-            <Text style={styles.secondaryText}>Entrar</Text>
-          )}
-        </TouchableOpacity>
+        {previewIsCurrent && preview.isPending && (
+          <View style={styles.previewLoading}>
+            <ActivityIndicator size="small" color={HomeColors.primary} />
+            <Text style={styles.previewLoadingText}>Buscando sala...</Text>
+          </View>
+        )}
 
+        {room && (
+          <View style={styles.preview}>
+            <Text style={styles.previewEyebrow}>Sala encontrada</Text>
+            <Text style={styles.previewName}>{room.name}</Text>
+            <Text style={styles.previewDetail}>
+              Creada por {room.creator} · {room.participants} {room.participants === 1 ? "participante" : "participantes"}
+            </Text>
+            {room.status !== "lobby" && (
+              <Text style={styles.previewUnavailable}>
+                Esta batalla ya ha empezado o ha terminado.
+              </Text>
+            )}
+          </View>
+        )}
+
+        {room?.status === "lobby" && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            disabled={!canJoin}
+            onPress={() => join.mutate(code)}
+            style={[styles.secondary, !canJoin && styles.secondaryOff]}
+          >
+            {join.isPending ? (
+              <ActivityIndicator color={HomeColors.primary} />
+            ) : (
+              <Text style={styles.secondaryText}>Unirme a esta batalla</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {previewIsCurrent && preview.error && (
+          <Text style={styles.error}>{errorMessage(preview.error)}</Text>
+        )}
         {join.error && <Text style={styles.error}>{errorMessage(join.error)}</Text>}
       </View>
     </View>
@@ -146,6 +187,40 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 4,
     textAlign: "center",
+  },
+
+  previewLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+  },
+  previewLoadingText: { fontSize: 13, color: HomeColors.textSecondary },
+
+  preview: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: HomeColors.surfaceElevated,
+  },
+  previewEyebrow: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: HomeColors.primary,
+  },
+  previewName: {
+    marginTop: 5,
+    fontSize: 18,
+    fontWeight: "700",
+    color: HomeColors.text,
+  },
+  previewDetail: { marginTop: 4, fontSize: 13, color: HomeColors.textSecondary },
+  previewUnavailable: {
+    marginTop: 10,
+    fontSize: 12,
+    color: HomeColors.errorText,
   },
 
   durations: { marginTop: 12 },

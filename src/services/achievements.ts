@@ -31,6 +31,8 @@ export async function fetchAchievementMetrics(
     weekendSessions: Number(row.weekend_sessions),
     longSessions: Number(row.long_sessions),
     cycleLaps: Number(row.cycle_laps),
+    battlesPlayed: Number(row.battles_played),
+    battlesWon: Number(row.battles_won),
   };
 }
 

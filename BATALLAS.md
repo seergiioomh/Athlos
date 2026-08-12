@@ -257,6 +257,27 @@ seleccionable.
 gana. Falta el aviso de mitad de batalla si vas fuera del podio; se decidió no
 notificar cada adelantamiento porque con 8 personas sería insufrible.
 
+### Ajustes posteriores
+
+`0039_battle_lobby_participants.sql` corrige un detalle de PostgREST: aunque
+`battle_participants.user_id` y `profiles.id` apuntan ambos a `auth.users`, no
+existe una relación directa que el cliente pueda seguir con un `select` anidado.
+La sala consulta `battle_lobby_participants(id)`, `security definer`, que antes
+comprueba que quien llama ya participa y devuelve únicamente id y nombre. No
+abrir una política de lectura de perfiles para arreglarlo.
+
+El código de la sala no entra a ciegas: al completar sus seis caracteres se
+llama a `battle_preview`, se ve nombre, creador y número de participantes, y
+solo si la sala sigue en espera aparece «Unirme a esta batalla». Dentro, el
+creador se marca como tal y quien no lo creó puede salir con una acción roja;
+la cancelación sigue siendo exclusiva del creador.
+
+`0041_battle_achievements.sql` añade cuatro logros propios: disputar la primera
+batalla, disputar cinco, la primera victoria y tres victorias. Una sala
+cancelada no cuenta; solo las batallas activas o terminadas, y las victorias ya
+cerradas por el cron. Estos logros miden participación y constancia competitiva,
+no peso, volumen ni información de rivales.
+
 ### Puesta en marcha del paso 3
 
 ```bash

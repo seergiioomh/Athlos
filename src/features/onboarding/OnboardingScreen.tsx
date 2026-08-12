@@ -229,7 +229,7 @@ export function OnboardingScreen() {
                 style={[styles.input, styles.textArea, styles.textAreaTall]}
                 value={String(draft.goalNotes ?? "")}
                 onChangeText={(value) => set("goalNotes", value)}
-                placeholder="Quiero ganar músculo y mejorar mi velocidad para el fútbol. Entreno mejor por la mañana y el gimnasio me pilla lejos los fines de semana."
+                placeholder="Cuéntanos qué quieres conseguir y cualquier detalle que debamos tener en cuenta."
                 placeholderTextColor={HomeColors.textTertiary}
                 multiline
                 maxLength={500}
@@ -244,7 +244,7 @@ export function OnboardingScreen() {
                   style={[styles.input, errors.displayName && styles.inputError]}
                   value={String(draft.displayName ?? "")}
                   onChangeText={(value) => set("displayName", value)}
-                  placeholder="Sergio"
+                  placeholder="Tu nombre"
                   placeholderTextColor={HomeColors.textTertiary}
                   autoCapitalize="words"
                   maxLength={40}
@@ -296,7 +296,7 @@ export function OnboardingScreen() {
                   <NumberInput
                     value={draft.heightCm}
                     invalid={Boolean(errors.heightCm)}
-                    placeholder="178"
+                    placeholder="Ej. 175"
                     onChange={(value) => set("heightCm", value)}
                   />
                 </Field>
@@ -305,7 +305,7 @@ export function OnboardingScreen() {
                   <NumberInput
                     value={draft.weightKg}
                     invalid={Boolean(errors.weightKg)}
-                    placeholder="74,5"
+                    placeholder="Ej. 70"
                     decimal
                     onChange={(value) => set("weightKg", value)}
                   />
@@ -319,7 +319,7 @@ export function OnboardingScreen() {
                   <NumberInput
                     value={draft.targetWeightKg}
                     invalid={Boolean(errors.targetWeightKg)}
-                    placeholder="70"
+                    placeholder="Opcional"
                     decimal
                     onChange={(value) => set("targetWeightKg", value)}
                   />
@@ -478,7 +478,7 @@ export function OnboardingScreen() {
                     style={[styles.input, styles.textArea]}
                     value={String(draft.limitations ?? "")}
                     onChangeText={(value) => set("limitations", value)}
-                    placeholder="Hombro derecho delicado, evito press militar"
+                    placeholder="Cuéntanos si hay alguna zona que te moleste"
                     placeholderTextColor={HomeColors.textTertiary}
                     multiline
                     maxLength={300}
@@ -496,7 +496,7 @@ export function OnboardingScreen() {
                     style={[styles.input, styles.textArea]}
                     value={String(draft.avoidExercises ?? "")}
                     onChangeText={(value) => set("avoidExercises", value)}
-                    placeholder="Burpees, peso muerto convencional"
+                    placeholder="Ejercicios que prefieras evitar"
                     placeholderTextColor={HomeColors.textTertiary}
                     multiline
                     maxLength={300}

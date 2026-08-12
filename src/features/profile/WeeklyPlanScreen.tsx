@@ -13,13 +13,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HomeColors } from "@/features/home/home-theme";
 import { errorMessage } from "@/utils/errors";
 import { WeeklySplitCard } from "./components/WeeklySplitCard";
-import { useActiveCycle, useGenerateCycle } from "./queries";
+import {
+  useActiveCycle,
+  useApproveCycle,
+  useDraftCycle,
+  useGenerateCycle,
+} from "./queries";
 
 export function WeeklyPlanScreen() {
   const router = useRouter();
 
   const { data: split } = useActiveCycle();
+  const { data: draft } = useDraftCycle();
   const makeSplit = useGenerateCycle();
+  const approve = useApproveCycle();
+  const shownSplit = draft ?? split;
 
   const back = () => {
     if (router.canGoBack()) {
@@ -56,14 +64,42 @@ export function WeeklyPlanScreen() {
         showsVerticalScrollIndicator={false}
       >
         <WeeklySplitCard
-          split={split ?? null}
+          split={shownSplit ?? null}
           generating={makeSplit.isPending}
           error={makeSplit.error ? errorMessage(makeSplit.error) : undefined}
           onGenerate={() => makeSplit.mutate()}
           onTalkToCoach={() => router.push("/(tabs)/coach")}
         />
 
-        {split && (
+        {draft ? (
+          <>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => approve.mutate(draft.id)}
+              disabled={approve.isPending}
+              style={styles.approve}
+            >
+              <Text style={styles.approveText}>
+                {approve.isPending ? "Guardandoâ€¦" : "Me encaja, empezar"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => makeSplit.mutate()}
+              disabled={makeSplit.isPending || approve.isPending}
+              style={styles.regenerate}
+            >
+              <Text style={styles.regenerateText}>
+                {makeSplit.isPending ? "RediseÃ±andoâ€¦" : "Prefiero otro ciclo"}
+              </Text>
+            </TouchableOpacity>
+
+            {approve.error && (
+              <Text style={styles.aside}>{errorMessage(approve.error)}</Text>
+            )}
+          </>
+        ) : split ? (
           <>
             <Text style={styles.section}>Cómo funciona</Text>
 
@@ -101,7 +137,7 @@ export function WeeklyPlanScreen() {
               hablarlo con el coach: te propone el cambio y tú decides.
             </Text>
           </>
-        )}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -171,6 +207,16 @@ const styles = StyleSheet.create({
   regenerateBusy: { opacity: 0.6 },
 
   regenerateText: { fontSize: 15, fontWeight: "700", color: HomeColors.text },
+
+  approve: {
+    marginTop: 20,
+    height: 50,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: HomeColors.primary,
+  },
+  approveText: { fontSize: 15, fontWeight: "700", color: HomeColors.onPrimary },
 
   aside: {
     marginTop: 12,

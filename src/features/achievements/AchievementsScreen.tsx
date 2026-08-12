@@ -35,6 +35,8 @@ const SIN_DATOS: AchievementMetrics = {
   weekendSessions: 0,
   longSessions: 0,
   cycleLaps: 0,
+  battlesPlayed: 0,
+  battlesWon: 0,
 };
 
 export function AchievementsScreen() {
@@ -95,18 +97,14 @@ export function AchievementsScreen() {
             </TouchableOpacity>
 
             <Text style={styles.title}>Logros</Text>
-            <Text style={styles.subtitle}>
-              Momentos que solo se consiguen una vez. Los bloqueados enseñan
-              cuánto te falta.
-            </Text>
           </View>
 
           <View style={styles.counter}>
             <Text style={styles.counterValue}>
               {conseguidos}
-              <Text style={styles.counterTotal}>/{total}</Text>
+              <Text style={styles.counterDivider}> / </Text>
+              <Text style={styles.counterTotal}>{total}</Text>
             </Text>
-            <Text style={styles.counterLabel}>conseguidos</Text>
           </View>
         </View>
 
@@ -177,13 +175,6 @@ const styles = StyleSheet.create({
     color: HomeColors.text,
   },
 
-  subtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    lineHeight: 20,
-    color: HomeColors.textSecondary,
-  },
-
   counter: { alignItems: "flex-end", marginTop: 52 },
 
   counterValue: {
@@ -194,8 +185,8 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
 
+  counterDivider: { fontSize: 20, fontWeight: "500", color: HomeColors.textSecondary },
   counterTotal: { fontSize: 17, fontWeight: "700", color: HomeColors.textSecondary },
-  counterLabel: { fontSize: 12, color: HomeColors.textSecondary },
 
   error: {
     marginTop: 20,

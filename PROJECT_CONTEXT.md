@@ -68,6 +68,29 @@ aplicables · progreso con peso, actividad comparada y marcas por grupo · perfi
 · ciclo de entrenamiento · pantalla de rachas · logros · batallas entre
 amigos · compartir un entrenamiento por enlace · recordatorios push.
 
+### Cambios recientes — 12 de agosto de 2026
+
+- **Bienvenida neutral.** Los ejemplos de los campos no contienen datos ni
+  contexto del autor: sirven como pistas para cualquier persona que cree una
+  cuenta. La misma regla se mantiene al editar el perfil.
+- **Ciclo como borrador visible.** `generate-split` siempre crea un borrador;
+  al terminar se invalida toda la caché de ciclos, no solo el activo. Tanto en
+  Entreno como en «Mi plan semanal» se puede revisar, aceptar o regenerar ese
+  borrador. Sin esa invalidación parecía que la generación no había hecho nada.
+- **Cuotas de IA en servidor.** `0040_ai_usage_limits.sql` cuenta de forma
+  atómica las llamadas antes de llegar a Claude: 3 entrenamientos, 2 ciclos y
+  20 mensajes de coach por usuario y día UTC. Las tres Edge Functions ya usan
+  `consume_ai_usage()`; nunca se debe poner este límite solo en el cliente.
+- **Batallas más legibles.** El código de seis caracteres primero muestra el
+  nombre de la sala, creador y aforo, y solo entonces permite entrar. Dentro de
+  la sala, los participantes se leen mediante `battle_lobby_participants()`:
+  una función `security definer` que devuelve solo sus nombres a quien ya
+  participa, sin abrir los perfiles.
+- **Logros como vitrina.** La rejilla enseña emblema, nombre y fecha si existe;
+  el detalle, descripción y progreso se abren al tocar una tarjeta. Cada logro
+  usa un icono distinto. `0041_battle_achievements.sql` añade la familia
+  Batallas: participación real y victorias, nunca volumen ni peso ajeno.
+
 ### Configuración viva
 
 | Dónde | Estado |
@@ -90,10 +113,10 @@ amigos · compartir un entrenamiento por enlace · recordatorios push.
 
 - **No hay política de privacidad**, y la app manda a Anthropic datos
   personales (peso, fecha de nacimiento, lesiones). Hace falta para publicar.
-- **No hay límite de gasto por usuario.** Cada persona que use la app consume
-  la cuenta de Anthropic del autor, sin tope: alguien puede pedir veinte
-  entrenamientos seguidos o tener el chat abierto toda la tarde. La caché de
-  prompts abarata cada llamada, pero no pone techo a cuántas se hacen.
+- **Límites de IA.** Cada usuario puede diseñar hasta 3 entrenamientos, 2
+  ciclos y enviar 20 mensajes al coach por día UTC. Se aplican en Supabase
+  antes de llamar a Claude; la caché abarata cada llamada, pero no sustituye
+  este tope de coste.
 - **Los enlaces de compartir usan el esquema `athlos://`**, que WhatsApp no
   convierte en enlace tocable: llega como texto plano. Arreglarlo son Universal
   Links, que exigen un dominio propio, el archivo
@@ -245,8 +268,8 @@ Esmeralda, Llama azul, Leyenda, Mítico. Cuanto más alta, más llamativa —el
 una propuesta que se guarda y se muestra, y la app la aplica con los permisos
 del usuario cuando él confirma.
 
-**Logros** (`src/features/achievements/definitions.ts`). Veinticuatro hitos en
-seis familias. Son la tercera capa de motivación y cada una mide algo distinto:
+**Logros** (`src/features/achievements/definitions.ts`). Veintiocho hitos en
+siete familias. Son la tercera capa de motivación y cada una mide algo distinto:
 el **nivel** cuánto llevas hecho, la **racha** cuánto de seguido, y los
 **logros** momentos concretos con nombre ("100 kg en una serie") que los otros
 dos no saben expresar. Si alguna vez se añade una cuarta, que mida algo que no
@@ -255,7 +278,9 @@ midan estas.
 Lo conseguido lo dicen **las métricas**, no la tabla; `user_achievements` solo
 guarda cuándo. Al revés, los logros que el historial ya cumplía antes de que
 existieran salían bloqueados enseñando "1 / 1", porque nunca hubo una fila que
-los registrara. Por eso los antiguos aparecen como "Conseguido" sin fecha.
+los registrara. Por eso los antiguos aparecen como "Conseguido" sin fecha. La
+rejilla no repite la descripción ni la barra de progreso: aparecen en el modal
+que se abre al tocar el logro, manteniendo la vitrina compacta.
 
 **Recordatorios push.** A quién avisar lo decide `users_to_remind()` en
 Postgres, no la Edge Function: es la única que puede mirar a todos los usuarios
@@ -378,6 +403,7 @@ Tablas, todas con RLS por `auth.uid()` (verificado):
 | `user_achievements` | Cuándo se desbloqueó cada logro. Solo la fecha: si está conseguido lo dicen las métricas |
 | `battles` | Una competición entre amigos. Ver `BATALLAS.md` |
 | `battle_participants` | Quién compite y con qué objetivo, congelado al empezar |
+| `ai_daily_usage` | Contador diario interno de peticiones a la IA, por usuario y acción |
 
 Funciones: `progress_summary`, `progress_period_summary`, `exercise_progress`,
 `workout_streak`, `approve_training_cycle`, `users_to_remind`,

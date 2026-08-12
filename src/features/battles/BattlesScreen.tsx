@@ -3,6 +3,8 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -61,10 +63,15 @@ export function BattlesScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.keyboard}
       >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={back}
@@ -133,23 +140,21 @@ export function BattlesScreen() {
                 <ActivityIndicator color={HomeColors.primary} />
               </View>
             )}
-
-            <Text style={styles.privacy}>
-              Los demás solo ven tus puntos. Nunca tus pesos ni tus ejercicios.
-            </Text>
           </View>
         ) : (
           <View style={styles.body}>
             <BattleEmpty />
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: HomeColors.background },
+  keyboard: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 60 },
 
   back: {
@@ -197,14 +202,6 @@ const styles = StyleSheet.create({
 
   resultText: { fontSize: 17, fontWeight: "700", color: HomeColors.text },
   resultTextWin: { color: HomeColors.primary },
-
-  privacy: {
-    marginTop: 4,
-    fontSize: 11,
-    lineHeight: 16,
-    color: HomeColors.textTertiary,
-    textAlign: "center",
-  },
 
   error: { marginTop: 16, fontSize: 13, color: HomeColors.errorText },
 });

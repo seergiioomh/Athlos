@@ -215,7 +215,7 @@ export function EditProfileSheet({
                     style={styles.input}
                     value={String(value("display_name") ?? "")}
                     onChangeText={(text) => set("display_name", text)}
-                    placeholder="Sergio"
+                    placeholder="Tu nombre"
                     placeholderTextColor={HomeColors.textTertiary}
                     autoCapitalize="words"
                     maxLength={40}
@@ -281,7 +281,7 @@ export function EditProfileSheet({
                     style={[styles.input, styles.textArea]}
                     value={String(value("goal_notes") ?? "")}
                     onChangeText={(text) => set("goal_notes", text)}
-                    placeholder="Quiero ganar músculo y mejorar mi velocidad para el fútbol"
+                    placeholder="Cuéntanos qué quieres conseguir"
                     placeholderTextColor={HomeColors.textTertiary}
                     multiline
                     maxLength={500}
@@ -405,7 +405,7 @@ export function EditProfileSheet({
                     style={[styles.input, styles.textArea]}
                     value={String(value("limitations") ?? "")}
                     onChangeText={(text) => set("limitations", text)}
-                    placeholder="Hombro derecho delicado"
+                    placeholder="Cuéntanos si hay alguna zona que te moleste"
                     placeholderTextColor={HomeColors.textTertiary}
                     multiline
                     maxLength={300}
@@ -417,7 +417,7 @@ export function EditProfileSheet({
                     style={[styles.input, styles.textArea]}
                     value={String(value("avoid_exercises") ?? "")}
                     onChangeText={(text) => set("avoid_exercises", text)}
-                    placeholder="Burpees, peso muerto convencional"
+                    placeholder="Ejercicios que prefieras evitar"
                     placeholderTextColor={HomeColors.textTertiary}
                     multiline
                     maxLength={300}
