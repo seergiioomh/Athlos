@@ -45,6 +45,10 @@ const sanitizeReps = (value: string) => value.replace(/[^0-9]/g, "");
  *
  * Las unidades van en la cabecera y no en cada fila: repetir "kg" y "reps"
  * cuatro veces le quitaba ancho justo a lo que hay que tocar.
+ *
+ * Todo dentro de una tarjeta con separadores finos, no una por serie: son
+ * cuatro filas de lo mismo, y darle marco propio a cada una las presentaba
+ * como cuatro bloques sin relación.
  */
 export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
   // Una entrada por serie, lleve progresión o no: así la fila 3 sugiere lo
@@ -60,11 +64,14 @@ export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
         <View style={styles.columnCheck} />
       </View>
 
-      {sets.map((set) => {
+      {sets.map((set, index) => {
         const target = targets[set.number - 1] ?? targets[0];
 
         return (
-          <View key={set.number} style={styles.row}>
+          <View
+            key={set.number}
+            style={[styles.row, index > 0 && styles.rowDivided]}
+          >
             <Text style={styles.number}>{set.number}</Text>
 
             {/* El `TextInput` ocupa el recuadro entero. Antes iba dentro de una
@@ -123,14 +130,19 @@ export function SetLogCard({ exercise, sets, onChange, onToggle }: Props) {
 }
 
 const styles = StyleSheet.create({
-  list: { gap: 8 },
+  list: {
+    borderRadius: 20,
+    backgroundColor: HomeColors.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
 
   columns: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingHorizontal: 12,
-    marginBottom: 2,
+    paddingTop: 8,
+    paddingBottom: 6,
   },
 
   columnNumber: { width: 20 },
@@ -150,10 +162,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: HomeColors.surface,
+    paddingVertical: 8,
+  },
+
+  rowDivided: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: HomeColors.border,
   },
 
   number: {
