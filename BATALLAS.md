@@ -58,12 +58,24 @@ es lo único que premia pasarse del objetivo, y lo hace con un peso pequeño.
 
 ### De dónde sale el objetivo
 
-De la **media real de sesiones por semana de las últimas 4 semanas**, no de los
-días declarados en el perfil. Si no hay historial suficiente, se cae a
-`days_per_week`.
+De una mezcla: **2/3 los días declarados en el perfil y 1/3 la media real de
+las últimas 4 semanas**. Manda el plan, y la realidad reciente lo corrige un
+poco en los dos sentidos.
 
-Es deliberado: usando lo declarado, bajarse a "1 día por semana" antes de retar
-era la jugada ganadora. Usando lo que de verdad haces, ese atajo desaparece.
+Esto se corrigió sobre la marcha (`0036`) y merece explicación, porque la
+primera versión parecía la buena y no lo era.
+
+`0035` usaba **solo la media real**, para cerrar el agujero de bajarse los días
+declarados justo antes de retar. Pero abría uno peor: entrenar poco las semanas
+previas te regalaba un objetivo ridículo. Con 3 sesiones en 28 días y 5 días
+declarados salía un objetivo de **1** — un entrenamiento y ya tenías los 1000
+puntos de adherencia al máximo.
+
+Y de los dos agujeros, el que abrí era el barato: entrenar menos no cuesta nada
+y no se ve. Bajarse los días declarados sí cuesta, porque **el coach diseña el
+ciclo con ese número** y te empeora los entrenamientos de verdad. Los días
+declarados son la señal más robusta, justo al revés de lo que asumí, y además
+son tu plan: que es exactamente lo que la batalla mide si cumples.
 
 El objetivo se **congela al empezar** (`target_sessions` en
 `battle_participants`), así que cambiar el perfil a mitad tampoco sirve.
