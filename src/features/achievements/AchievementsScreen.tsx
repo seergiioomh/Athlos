@@ -37,6 +37,7 @@ const SIN_DATOS: AchievementMetrics = {
   cycleLaps: 0,
   battlesPlayed: 0,
   battlesWon: 0,
+  bestStreak: 0,
 };
 
 export function AchievementsScreen() {

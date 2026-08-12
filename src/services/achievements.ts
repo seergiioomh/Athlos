@@ -33,6 +33,7 @@ export async function fetchAchievementMetrics(
     cycleLaps: Number(row.cycle_laps),
     battlesPlayed: Number(row.battles_played),
     battlesWon: Number(row.battles_won),
+    bestStreak: Number(row.best_streak),
   };
 }
 

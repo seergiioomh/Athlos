@@ -19,6 +19,8 @@ export interface AchievementMetrics {
   longSessions: number;
   cycleLaps: number;
   battlesPlayed: number;
+  /** La MEJOR racha de la historia, no la actual. */
+  bestStreak: number;
   battlesWon: number;
 }
 
@@ -35,6 +37,12 @@ export const FAMILIES = [
   { key: "volumen", label: "Volumen", color: Colors.blue },
   { key: "exploracion", label: "Exploración", color: Colors.teal },
   { key: "momentos", label: "Momentos", color: Colors.purple },
+  /**
+   * El rojo sale de la propia escala de rachas: es el color del escalón
+   * "Imparable" en `streak-tiers`. No es el rojo de error aunque comparta
+   * valor, y por eso esta familia no lo hereda del resto de la interfaz.
+   */
+  { key: "rachas", label: "Rachas", color: Colors.error },
   { key: "batallas", label: "Batallas", color: Colors.orange },
 ] as const;
 
@@ -260,6 +268,95 @@ export const ACHIEVEMENTS: Achievement[] = [
     metric: "distinctMuscleGroups",
     threshold: 10,
     icon: "body",
+  },
+
+  // --------------------------------------------------------------- rachas
+  // Un escalón de racha alcanzado es un logro: pasó, y romperla después no lo
+  // deshace. Por eso miden `bestStreak` y no la racha viva.
+  //
+  // Los nombres son los de `streak-tiers` a propósito: el logro ES el escalón,
+  // y dos nombres distintos para lo mismo obligarían a aprenderse ambos.
+  // "Chispa" (1) se queda fuera porque la cubre "El primero".
+  {
+    slug: "racha-encendido",
+    name: "Encendido",
+    hint: "Encadena 3 entrenamientos sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 3,
+    icon: "flame",
+  },
+  {
+    slug: "racha-en-marcha",
+    name: "En marcha",
+    hint: "Encadena 6 entrenamientos sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 6,
+    icon: "flame",
+  },
+  {
+    slug: "racha-imparable",
+    name: "Imparable",
+    hint: "Encadena 10 entrenamientos sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 10,
+    icon: "flame",
+  },
+  {
+    slug: "racha-al-rojo",
+    name: "Al rojo",
+    hint: "Encadena 18 entrenamientos sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 18,
+    icon: "flame",
+  },
+  {
+    slug: "racha-oro",
+    name: "Oro",
+    hint: "Encadena 30 entrenamientos sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 30,
+    icon: "medal",
+  },
+  {
+    slug: "racha-esmeralda",
+    name: "Esmeralda",
+    hint: "Encadena 50 entrenamientos sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 50,
+    icon: "medal",
+  },
+  {
+    slug: "racha-llama-azul",
+    name: "Llama azul",
+    hint: "Encadena 85 entrenamientos sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 85,
+    icon: "medal",
+  },
+  {
+    slug: "racha-leyenda",
+    name: "Leyenda",
+    hint: "Encadena 150 entrenamientos sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 150,
+    icon: "trophy",
+  },
+  {
+    slug: "racha-mitico",
+    name: "Mítico",
+    hint: "Encadena 250 entrenamientos sin romper la racha.",
+    family: "rachas",
+    metric: "bestStreak",
+    threshold: 250,
+    icon: "trophy",
   },
 
   // ------------------------------------------------------------- momentos
