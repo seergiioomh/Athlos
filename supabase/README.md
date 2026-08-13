@@ -56,6 +56,7 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0042_battle_start_notice.sql` | Batallas: aviso a los participantes al empezar |
 | `0043_set_progressions.sql` | Objetivo por serie, para progresiones |
 | `0044_streak_achievements.sql` | Mejor racha histórica, para los logros de racha |
+| `0045_battle_achievement_points_fix.sql` | Arregla puntos de logro en batallas: exige haber entrenado |
 
 ### Archivos que no forman parte de la instalación
 

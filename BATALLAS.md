@@ -53,6 +53,16 @@ a quien entrena 6 y hace 5 (833).
 **Marcas personales**: ejercicios donde tu mejor peso durante la batalla supera
 tu mejor peso *anterior* a ella. Se cuentan ejercicios distintos, no series.
 
+**Logros desbloqueados**: solo cuentan si esa persona entrenó al menos una vez
+durante la batalla (`0045`). Antes se contaba por `unlocked_at` sin más, y eso
+premiaba trabajo hecho ANTES de empezar: `unlocked_at` es cuándo la app se
+enteró y lo guardó, no cuándo se cumplió el umbral, y los logros solo se
+sincronizan al terminar un entrenamiento o al abrir la pantalla de Logros. Con
+las familias de Rachas y Batallas recién añadidas, una cuenta con historial que
+abriera Logros durante una batalla se llevaba de golpe 75 puntos por cada logro
+atrasado, sin haber entrenado nada. Caso real que lo destapó: una cuenta con 0
+sesiones ganando a otra con 1.
+
 **Días activos**: días distintos con sesión terminada dentro de la batalla.
 Solapa a propósito con la adherencia: como la adherencia está topada en 1000,
 es lo único que premia pasarse del objetivo, y lo hace con un peso pequeño.
