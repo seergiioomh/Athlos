@@ -102,7 +102,6 @@ export function BattleInfoSheet({ visible, onClose }: Props) {
               label="Cada marca personal"
               detail="Superar el mejor peso que tenías ANTES de empezar la batalla, en cualquier ejercicio. Máximo 300."
             />
-            <Rule points="75" label="Cada logro que desbloquees" />
             <Rule
               points="15"
               label="Cada día que entrenas"
@@ -135,7 +134,7 @@ export function BattleInfoSheet({ visible, onClose }: Props) {
             </Text>
             <Text style={styles.aside}>
               Son solo los puntos por cumplir el plan. A los dos se les sumarían
-              además los días entrenados, las marcas y los logros.
+              además los días entrenados y las marcas personales.
             </Text>
           </Section>
 

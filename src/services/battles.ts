@@ -21,7 +21,6 @@ export interface BattleScore {
   targetSessions: number;
   adherencePoints: number;
   prPoints: number;
-  achievementPoints: number;
   activeDayPoints: number;
   totalPoints: number;
 }
@@ -86,7 +85,6 @@ export async function fetchBattleScore(battleId: string): Promise<BattleScore[]>
     targetSessions: Number(row.target_sessions),
     adherencePoints: Number(row.adherence_points),
     prPoints: Number(row.pr_points),
-    achievementPoints: Number(row.achievement_points),
     activeDayPoints: Number(row.active_day_points),
     totalPoints: Number(row.total_points),
   }));

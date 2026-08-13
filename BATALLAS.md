@@ -42,7 +42,6 @@ Si algún día se toca la fórmula, que sea sin romper esta regla.
 ```
 Puntos = min(sesiones hechas / objetivo, 1) × 1000     ← adherencia, tope 1000
        + marcas personales superadas × 50               ← tope 300
-       + logros desbloqueados × 75
        + días activos × 15
 ```
 
@@ -53,19 +52,34 @@ a quien entrena 6 y hace 5 (833).
 **Marcas personales**: ejercicios donde tu mejor peso durante la batalla supera
 tu mejor peso *anterior* a ella. Se cuentan ejercicios distintos, no series.
 
-**Logros desbloqueados**: solo cuentan si esa persona entrenó al menos una vez
-durante la batalla (`0045`). Antes se contaba por `unlocked_at` sin más, y eso
-premiaba trabajo hecho ANTES de empezar: `unlocked_at` es cuándo la app se
-enteró y lo guardó, no cuándo se cumplió el umbral, y los logros solo se
-sincronizan al terminar un entrenamiento o al abrir la pantalla de Logros. Con
-las familias de Rachas y Batallas recién añadidas, una cuenta con historial que
-abriera Logros durante una batalla se llevaba de golpe 75 puntos por cada logro
-atrasado, sin haber entrenado nada. Caso real que lo destapó: una cuenta con 0
-sesiones ganando a otra con 1.
-
 **Días activos**: días distintos con sesión terminada dentro de la batalla.
 Solapa a propósito con la adherencia: como la adherencia está topada en 1000,
 es lo único que premia pasarse del objetivo, y lo hace con un peso pequeño.
+
+### Por qué los logros NO puntúan
+
+Puntuaron 75 cada uno hasta la `0046`, y se quitaron por dos fallos encadenados
+que conviene no repetir.
+
+El primero: se contaban por `unlocked_at`, que no es cuándo se cumplió el
+umbral sino cuándo la app se enteró y lo guardó —solo se sincronizan al
+terminar un entrenamiento o al abrir la pantalla de Logros—. Al añadir las
+familias de Rachas y Batallas, una cuenta con historial que abriera Logros
+durante una batalla se llevaba de golpe 75 puntos por cada logro atrasado.
+**Caso real: una cuenta con 0 sesiones ganando a otra con 1.** La `0045` lo
+tapó exigiendo haber entrenado durante la batalla.
+
+El segundo no tiene parche: **un logro se gana una vez en la vida de la
+cuenta, no por batalla.** Quien lleva tiempo en la app puede tenerlo casi todo
+desbloqueado y sacar 0 por mucha constancia que demuestre, mientras alguien
+recién llegado suma por cada umbral que le quedaba a mano aunque entrene menos.
+Eso hace que el término dependa del historial FUERA de la ventana, que es justo
+lo que la regla de arriba promete no hacer.
+
+Adherencia, marcas y días activos ya miden constancia real dentro de la batalla
+sin depender de nada anterior. Si alguna vez se quiere volver a premiar
+desbloquear cosas compitiendo, tendrá que ser con algo que se pueda ganar en
+cada batalla.
 
 ### De dónde sale el objetivo
 

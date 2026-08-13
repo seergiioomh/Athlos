@@ -57,6 +57,7 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0043_set_progressions.sql` | Objetivo por serie, para progresiones |
 | `0044_streak_achievements.sql` | Mejor racha histórica, para los logros de racha |
 | `0045_battle_achievement_points_fix.sql` | Arregla puntos de logro en batallas: exige haber entrenado |
+| `0046_battle_drop_achievement_points.sql` | Los logros dejan de puntuar en batallas (lo reemplaza a `0045`) |
 
 ### Archivos que no forman parte de la instalación
 
