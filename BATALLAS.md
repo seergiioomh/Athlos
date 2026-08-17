@@ -40,7 +40,7 @@ Si algún día se toca la fórmula, que sea sin romper esta regla.
 ## La fórmula
 
 ```
-Puntos = min(sesiones hechas / objetivo, 1) × 1000     ← adherencia, tope 1000
+Puntos = min(sesiones ponderadas / objetivo, 1) × 1000  ← adherencia, tope 1000
        + marcas personales superadas × 50               ← tope 300
        + días activos × 15
 ```
@@ -48,6 +48,24 @@ Puntos = min(sesiones hechas / objetivo, 1) × 1000     ← adherencia, tope 100
 **Adherencia** es el término que manda, y el que hace justa la batalla.
 `objetivo` es *tuyo*, así que quien entrena 3 días y hace 3 (1000 puntos) gana
 a quien entrena 6 y hace 5 (833).
+
+**"Sesiones ponderadas" no es un conteo, es cumplimiento** (`0047`). Antes una
+sesión valía 1 con solo pulsar "Terminar entrenamiento", sin exigir ni una
+serie registrada —el botón se queda activo aunque no hayas marcado nada, a
+propósito, para poder saltarte un ejercicio—, así que dos sesiones puntuaban
+igual aunque una cumpliera el plan entero y la otra estuviera vacía.
+
+Ahora cada sesión aporta una fracción: series marcadas con reps y peso iguales
+o por encima del objetivo de ESA serie, entre series previstas en el plan.
+Cumplir las 4 de 4 vale como una sesión entera; cumplir 2 de 4, media. El
+objetivo por serie respeta la progresión (`set_targets`) cuando el ejercicio la
+lleva, igual que `targetsOf()` en la app.
+
+`sessions_done` en el resultado se queda como el conteo literal de sesiones
+terminadas —sigue siendo cierto, y es lo que se lee en el desglose como "3 de 4
+sesiones"—; lo que cambia es de qué número sale `adherence_points`. El cambio
+no toca ni una columna de lo que devuelve `battle_ranking`, así que no hizo
+falta tocar la app.
 
 **Marcas personales**: ejercicios donde tu mejor peso durante la batalla supera
 tu mejor peso *anterior* a ella. Se cuentan ejercicios distintos, no series.

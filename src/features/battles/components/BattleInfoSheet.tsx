@@ -95,7 +95,7 @@ export function BattleInfoSheet({ visible, onClose }: Props) {
             <Rule
               points="hasta 1000"
               label="Cumplir tu plan"
-              detail="Sesiones que haces entre las que te tocaban. Es lo que más pesa, con diferencia."
+              detail="Sesiones que haces entre las que te tocaban, según cuánto cumplas de cada una: marcar todas las series con su peso y reps vale como sesión entera, dejarte la mitad vale media. Es lo que más pesa, con diferencia."
             />
             <Rule
               points="50"
