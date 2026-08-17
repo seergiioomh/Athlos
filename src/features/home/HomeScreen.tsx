@@ -77,10 +77,10 @@ export function HomeScreen() {
         </View>
 
         <View style={styles.headerRight}>
-          <StreakBadge
-            streak={streak ?? 0}
-            onPress={() => router.push("/rachas")}
-          />
+          {/* Sin `onPress`: la insignia informa, no lleva a ningún sitio. La
+              pantalla con todos los escalones enseñaba de golpe metas de 250
+              entrenamientos, que a quien acaba de empezar le dice poco. */}
+          <StreakBadge streak={streak ?? 0} />
 
           <TouchableOpacity
             activeOpacity={0.8}

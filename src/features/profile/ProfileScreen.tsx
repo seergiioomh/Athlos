@@ -177,11 +177,7 @@ export function ProfileScreen() {
         <View style={styles.stats}>
           <Stat value={String(summary?.finishedSessions ?? 0)} label="Entrenos" />
           <Stat value={String(summary?.totalSets ?? 0)} label="Series" />
-          <StreakBadge
-            streak={streak ?? 0}
-            size="card"
-            onPress={() => router.push("/rachas")}
-          />
+          <StreakBadge streak={streak ?? 0} size="card" />
         </View>
 
         {/* Un 0 puede ser una racha rota o una consulta que falló: sin
