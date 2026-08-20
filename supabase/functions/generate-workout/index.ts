@@ -335,7 +335,39 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle();
 
-    const previa = ultimo?.cycle_position as number | null | undefined;
+    let previa = ultimo?.cycle_position as number | null | undefined;
+
+    /**
+     * Sin ningún entrenamiento de ESTE ciclo, la rotación no tiene dónde
+     * anclarse y empezaría por la primera sesión. Eso repite lo que el usuario
+     * acaba de hacer si su último entrenamiento fue justo ese foco, que es lo
+     * que pasa siempre al aprobar el primer ciclo: los planes anteriores no
+     * tienen `cycle_id` porque se generaron sin ciclo.
+     *
+     * Así que se mira el último completado aunque no pertenezca al ciclo, y se
+     * deduce qué sesión fue por los grupos musculares que trabajó. Si no se
+     * parece a ninguna con claridad, se empieza por la primera como antes.
+     */
+    if (!previa) {
+      const { data: suelto } = await supabase
+        .from("workout_plans")
+        .select("plan_exercises ( exercises ( muscle_group ) )")
+        .eq("user_id", userId)
+        .not("completed_at", "is", null)
+        // Un compartido es una sesión ocasional, no una parada de la rotación.
+        .neq("source", "shared")
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const grupos = ((suelto?.plan_exercises ?? []) as {
+        exercises: { muscle_group: string } | null;
+      }[])
+        .map((item) => item.exercises?.muscle_group)
+        .filter((group): group is string => Boolean(group));
+
+      previa = sesionQueEncaja(grupos, sesiones);
+    }
 
     // El módulo protege de una posición mayor que el ciclo, que puede quedar
     // guardada si el ciclo se rehizo más corto con el mismo id.
@@ -460,6 +492,72 @@ Deno.serve(async (req: Request) => {
 
   return json({ plan_id: created.id }, 200);
 });
+
+/** Sin tildes y en minúsculas, para comparar "tríceps" con "triceps". */
+const normalizar = (texto: string) =>
+  texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+
+/**
+ * Dos palabras son el mismo músculo si una empieza por la otra: así "gemelo"
+ * encaja con "gemelos" y "cuadriceps" con "cuadricep". El mínimo de cuatro
+ * letras evita que "gen" case con cualquier cosa.
+ */
+const mismoMusculo = (a: string, b: string) =>
+  a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a));
+
+/**
+ * Qué sesión del ciclo se parece más a los grupos musculares de un
+ * entrenamiento, o `null` si ninguna encaja.
+ *
+ * Se usa solo para anclar la rotación cuando el último entrenamiento no
+ * pertenece al ciclo. Es una heurística, así que ante la duda —ninguna
+ * coincidencia, o dos sesiones empatadas— devuelve `null` y la rotación
+ * empieza por la primera, que es el comportamiento de siempre.
+ */
+function sesionQueEncaja(
+  grupos: string[],
+  sesiones: { position: number; label: string; focus: string }[],
+): number | null {
+  if (grupos.length === 0) return null;
+
+  const musculos = grupos.map(normalizar);
+
+  const puntuadas = sesiones.map((sesion) => {
+    const palabras = normalizar(`${sesion.label} ${sesion.focus}`)
+      .split(/[^a-z]+/)
+      .filter((palabra) => palabra.length >= 4);
+
+    const aciertos = musculos.filter((musculo) =>
+      palabras.some((palabra) => mismoMusculo(musculo, palabra)),
+    ).length;
+
+    return { position: sesion.position, aciertos };
+  });
+
+  const mejor = puntuadas.reduce((a, b) => (b.aciertos > a.aciertos ? b : a));
+
+  /**
+   * Se exige coincidencia MAYORITARIA, no cualquier parecido: un
+   * entrenamiento con un ejercicio de pecho y otro de espalda encaja "un
+   * poco" con Push y con Pull, y ahí adivinar es peor que no hacer nada.
+   */
+  if (mejor.aciertos * 2 <= musculos.length) return null;
+
+  /**
+   * Un empate no impide decidir, al contrario: dos sesiones empatan porque
+   * trabajan lo mismo —un ciclo de cinco días repite Push y Pierna—, así que
+   * la siguiente a cualquiera de ellas sirve igual para no repetir foco. Se
+   * coge la primera para que el resultado sea siempre el mismo.
+   */
+  return Math.min(
+    ...puntuadas
+      .filter((item) => item.aciertos === mejor.aciertos)
+      .map((item) => item.position),
+  );
+}
 
 async function recentHistory(
   supabase: ReturnType<typeof createClient>,

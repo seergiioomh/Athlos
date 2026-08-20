@@ -265,6 +265,24 @@ Vive en `weekly_splits` —la tabla conserva el nombre antiguo— con la columna
 `cycle`, y cada plan guarda de qué ciclo y qué posición salió. `generate-workout`
 mira el último plan **completado** de ese ciclo y avanza uno.
 
+**Si no hay ninguno de ese ciclo, se deduce por los grupos musculares.** Pasa
+siempre al aprobar el primer ciclo: los entrenamientos anteriores se generaron
+sin ciclo, así que tienen `cycle_id` nulo, la rotación no encontraba dónde
+anclarse, empezaba por la posición 1 y **repetía justo lo que el usuario
+acababa de hacer**. Ahora `sesionQueEncaja()` compara los músculos del último
+entrenamiento completado con el foco de cada sesión.
+
+Dos detalles de esa heurística que no son arbitrarios:
+
+- **Exige coincidencia mayoritaria.** Un entrenamiento con un ejercicio de
+  pecho y otro de espalda encaja "un poco" con Push y con Pull; ahí adivinar es
+  peor que empezar por la primera.
+- **Un empate decide, no bloquea.** En un ciclo de cinco días, Push y Pierna
+  salen dos veces, así que un empuje empata entre la 1 y la 4 — pero empatan
+  porque trabajan lo mismo, y la siguiente a cualquiera de ellas sirve igual
+  para no repetir foco. Se coge la primera por determinismo. La versión inicial
+  devolvía `null` ante empate y por eso no arreglaba nada.
+
 Un ciclo nuevo se guarda como **borrador** (`status: 'draft'`) y no toca al
 vigente hasta que el usuario lo aprueba. La función `approve_training_cycle()`
 archiva el activo y activa el nuevo en la misma transacción, y un índice único
