@@ -4,7 +4,7 @@ Documento de arranque para una sesión nueva. Recoge lo que **no se deduce
 leyendo el código**: las decisiones tomadas, por qué se tomaron, y los sitios
 donde ya nos hemos equivocado una vez.
 
-Última actualización: **11 de agosto de 2026**.
+Última actualización: **20 de agosto de 2026**.
 
 Complementa, no sustituye:
 
@@ -89,6 +89,14 @@ Pendiente.
 
 ### Cambios recientes — 20 de agosto de 2026
 
+- **Progreso más visual y compacto.** Debajo de la gráfica de peso hay un
+  heatmap rosa de cuatro semanas completas; una casilla encendida significa
+  que se terminó un entrenamiento y al tocarla se abre el detalle real de
+  ejercicios y series. Se retiró «Tu actividad»: las comparaciones agregadas
+  ocupaban mucho espacio y aportaban menos que el historial y las marcas.
+- **El sueño sale del producto.** Ya no se pregunta al editar el perfil ni se
+  envía a ninguna función de IA. La columna antigua permanece sin uso para no
+  introducir una migración destructiva.
 - **Un entrenamiento por día, descansos que aconsejan.** Ver "El calendario dice
   cuándo, el ciclo dice qué" en Conceptos del dominio. Toca la tarjeta de
   Inicio, la pestaña Entrenar y `generate-workout`. **La función hay que
@@ -260,8 +268,12 @@ sensaciones, que el coach lee al preparar la siguiente sesión.
 
 **Coach.** Chat con la IA. Puede proponer cambios; el usuario los aplica o no.
 
-**Progreso.** Gráfica de peso interactiva, "Tu actividad" comparada contra el
-periodo anterior, y las marcas por ejercicio filtradas por grupo muscular.
+**Progreso.** Gráfica de peso interactiva, heatmap rosa de las últimas cuatro
+semanas y marcas por ejercicio filtradas por grupo muscular. El heatmap es un
+rectángulo de 28 casillas —cuatro filas completas de siete—, sin números ni
+leyenda: rosa significa entrenamiento terminado. Tocar una casilla rosa abre
+el detalle de ejercicios, pesos y repeticiones de esa sesión. Usa el mismo
+`PastWorkoutSheet` que Inicio, pero con el acento rosa de Progreso.
 
 El verde y el ámbar de la variación de peso **dependen del objetivo del
 usuario**, no de la dirección: manda el peso objetivo si existe, y si no el
@@ -441,9 +453,11 @@ El **campo libre** (`goal_notes`) es la pieza que más contexto aporta: una
 etiqueta dice "ganar músculo", una frase dice "ganar músculo y mejorar mi
 velocidad para el fútbol". Viaja a las tres funciones de IA.
 
-Zonas de interés, cardio, actividad diaria y horas de sueño **ya no se
-preguntan** en la bienvenida, pero siguen en la tabla, siguen editables desde
-el perfil y siguen viajando al prompt. No se borró ninguna columna.
+Zonas de interés, cardio y actividad diaria **ya no se preguntan** en la
+bienvenida, pero siguen editables desde el perfil y siguen viajando al prompt.
+Las horas de sueño no se preguntan ni se envían a la IA: una cifra declarada
+una vez no describe la recuperación real de hoy. La columna antigua se conserva
+para evitar una migración destructiva, pero ya no participa en la app.
 
 Dos trampas del formulario, las dos ya pisadas:
 
@@ -614,16 +628,12 @@ nunca ha existido.
 Si algún día se recogen, hay que añadirlas **en la consulta y en la regla del
 prompt**: las dos, o el prompt vuelve a describir datos que no llegan.
 
-**El sueño declarado es contexto, no una orden.** `sleep_hours` es lo que el
-usuario puso una vez en el perfil —ya ni se pregunta en la bienvenida—, y había
-una regla que decía «si duerme poco, baja el volumen». Como el número no cambia
-nunca, quien escribió 6 arrastraba volumen recortado **para siempre**. La regla
-se quedó con la actividad diaria y el cardio, que sí son rasgos estables, y el
-dato se etiqueta como declarado. El estado de hoy sale del historial de
-sesiones, que es real y reciente.
-
-`generate-split` es distinto y no había que tocarlo: manda el perfil entero como
-JSON, así que ahí `sleep_hours` sí se usa aunque no aparezca como línea.
+**El sueño no se usa.** `sleep_hours` era una respuesta puntual convertida en
+rasgo permanente. Quien escribió 6 horas podía arrastrar recomendaciones de
+menor volumen indefinidamente aunque después durmiera bien. Por eso no aparece
+en el perfil editable ni viaja a `generate-workout`, `generate-split` o
+`coach-chat`. Si algún día se recupera, tendrá que ser como dato reciente, no
+como una respuesta fija de la bienvenida.
 
 ### Caché de prompts
 

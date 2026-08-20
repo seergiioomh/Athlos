@@ -144,17 +144,14 @@ export const onboardingSchema = z.object({
 
   // ------------------------------------------------- ya no se preguntan
   /**
-   * Estos cuatro salen de la bienvenida en el rediseño, pero siguen en la base
-   * y siguen viajando al prompt. Opcionales para que los perfiles que ya los
-   * tienen no se rompan y las cuentas nuevas puedan no traerlos.
+   * Estos campos salen de la bienvenida en el rediseño, pero siguen en la
+   * base. Opcionales para que los perfiles antiguos no se rompan.
    */
   cardio: z.enum(["ninguno", "poco", "moderado", "mucho"]).optional(),
 
   dailyActivity: z
     .enum(["sedentaria", "ligera", "activa", "muy-activa"])
     .optional(),
-
-  sleepHours: z.coerce.number().min(3).max(14).optional(),
 
   limitations: z.string().trim().max(300, "Demasiado largo").optional(),
   avoidExercises: z.string().trim().max(300, "Demasiado largo").optional(),
@@ -202,7 +199,6 @@ export const toProfileUpdate = (values: OnboardingValues) => ({
       : null,
   cardio: values.cardio ?? null,
   daily_activity: values.dailyActivity ?? null,
-  sleep_hours: values.sleepHours ?? null,
   limitations: values.limitations || null,
   avoid_exercises: values.avoidExercises || null,
   onboarded_at: new Date().toISOString(),
@@ -320,11 +316,6 @@ export const dailyActivityOptions: { value: DailyActivity; label: string }[] = [
   { value: "activa", label: "De pie o andando" },
   { value: "muy-activa", label: "Trabajo físico" },
 ];
-
-export const sleepOptions = [5, 6, 7, 8, 9].map((hours) => ({
-  value: hours,
-  label: `${hours} h`,
-}));
 
 /** Los días por semana ya no se preguntan: salen de `trainingDays`. */
 export const daysOptions = [2, 3, 4, 5, 6].map((days) => ({

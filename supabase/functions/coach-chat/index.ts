@@ -49,6 +49,8 @@ Cómo respondes:
 - Concreto y accionable. Antes que teoría, dile qué hacer.
 - Usas lo que sabes de él: su objetivo, su nivel, su material, sus limitaciones
   y lo que ha entrenado estos días.
+- No bases recomendaciones en horas de sueño: ATHLOS no las recoge como un
+  dato reciente y fiable.
 - Si te pregunta algo que no puedes saber, dilo en lugar de inventarlo.
 
 Cambiar el entrenamiento:
@@ -395,7 +397,7 @@ async function loadContext(
       `display_name, birth_date, sex, height_cm, weight_kg, target_weight_kg,
        goal, goal_notes, focus_areas, experience, technique_level,
        days_per_week, training_days, session_minutes, equipment, sport,
-       sport_days, daily_activity, sleep_hours, cardio, limitations,
+       sport_days, daily_activity, cardio, limitations,
        avoid_exercises`,
     )
     .eq("id", userId)
@@ -483,9 +485,6 @@ async function loadContext(
           } además del gimnasio`,
         profile.cardio && `- Cardio: ${profile.cardio}`,
         profile.daily_activity && `- Actividad diaria: ${profile.daily_activity}`,
-        // Declaradas una vez en el perfil, no lo que durmió anoche. Ver el
-        // mismo campo en `generate-workout`.
-        profile.sleep_hours && `- Horas de sueño que declara habitualmente: ${profile.sleep_hours}`,
         profile.limitations && `- Limitaciones: ${profile.limitations}`,
         profile.avoid_exercises && `- No quiere hacer: ${profile.avoid_exercises}`,
       ]

@@ -125,7 +125,7 @@ Deno.serve(async (req: Request) => {
       `display_name, birth_date, sex, goal, goal_notes, focus_areas,
        experience, technique_level, days_per_week, training_days,
        session_minutes, equipment, sport, sport_days, daily_activity,
-       sleep_hours, cardio, limitations, avoid_exercises`,
+       cardio, limitations, avoid_exercises`,
     )
     .eq("id", userId)
     .maybeSingle();

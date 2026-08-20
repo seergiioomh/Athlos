@@ -29,7 +29,6 @@ import {
   sexOptions,
   sportDaysOptions,
   sportOptions,
-  sleepOptions,
   techniqueOptions,
   weekdayOptions,
 } from "@/features/onboarding/schema";
@@ -378,14 +377,6 @@ export function EditProfileSheet({
                     options={dailyActivityOptions}
                     value={value("daily_activity") ?? undefined}
                     onChange={(next) => set("daily_activity", next)}
-                  />
-                </Field>
-
-                <Field label="Horas de sueño">
-                  <ChipGroup
-                    options={sleepOptions}
-                    value={value("sleep_hours") ?? undefined}
-                    onChange={(next) => set("sleep_hours", next)}
                   />
                 </Field>
 

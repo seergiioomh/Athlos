@@ -271,7 +271,7 @@ Deno.serve(async (req: Request) => {
       `display_name, birth_date, sex, height_cm, weight_kg, target_weight_kg,
        goal, goal_notes, focus_areas, experience, technique_level,
        days_per_week, training_days, session_minutes, equipment, sport,
-       sport_days, daily_activity, sleep_hours, cardio, limitations,
+       sport_days, daily_activity, cardio, limitations,
        avoid_exercises, timezone`,
     )
     .eq("id", userId)
@@ -832,13 +832,6 @@ function describeProfile(profile: Record<string, unknown>) {
       } además del gimnasio`,
     profile.cardio && `- Cardio que hace: ${profile.cardio}`,
     profile.daily_activity && `- Actividad diaria fuera del gimnasio: ${profile.daily_activity}`,
-    // "Declaradas" y no "horas de sueño" a secas: es lo que el usuario puso
-    // una vez en el perfil, no lo que durmió anoche. Sin ese matiz se leía como
-    // el estado de hoy, y con la regla que había —"si duerme poco, baja el
-    // volumen"— quien escribió 6 arrastraba el volumen recortado para siempre,
-    // durmiera como durmiera. Ahora es contexto, no una orden de bajar carga:
-    // lo de hoy sale del historial de sesiones, que sí es real y reciente.
-    profile.sleep_hours && `- Horas de sueño que declara habitualmente: ${profile.sleep_hours}`,
     profile.limitations && `- Limitaciones que declara: ${profile.limitations}`,
     profile.avoid_exercises && `- Ejercicios que no quiere hacer: ${profile.avoid_exercises}`,
   ];
