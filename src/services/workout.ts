@@ -3,7 +3,10 @@ import type { PlanExerciseWithExercise, WorkoutPlanRow } from "@/types/database"
 import type { SharedWorkout } from "@/features/workout/share";
 import type {
   CompletedSet,
+  OpenWorkoutSession,
+  SetEntry,
   SetTarget,
+  WorkoutSessionDraft,
   WorkoutPlan,
 } from "@/features/workout/types";
 
@@ -330,13 +333,52 @@ export async function importSharedWorkout(
  * Abre la sesión de hoy para ese plan, o devuelve la que ya estuviera
  * abierta: entrar y salir de la pantalla no debe crear sesiones sueltas.
  */
+const sanearDraft = (value: unknown): WorkoutSessionDraft | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+
+  const raw = value as Record<string, unknown>;
+  const rawEntries = raw.entries;
+  if (!rawEntries || typeof rawEntries !== "object" || Array.isArray(rawEntries)) {
+    return null;
+  }
+
+  const entries: Record<string, SetEntry[]> = {};
+
+  for (const [exerciseId, sets] of Object.entries(rawEntries)) {
+    if (!Array.isArray(sets)) continue;
+
+    entries[exerciseId] = sets
+      .map((set) => {
+        const item = set as Record<string, unknown>;
+        return {
+          number: Number(item.number),
+          weightKg: typeof item.weightKg === "string" ? item.weightKg : "",
+          reps: typeof item.reps === "string" ? item.reps : "",
+          // Las filas de `session_sets` deciden qué está completado.
+          done: false,
+        };
+      })
+      .filter((set) => Number.isInteger(set.number) && set.number > 0 && set.number <= 12);
+  }
+
+  const exerciseIndex = Number(raw.exerciseIndex);
+  const restDeadline = Number(raw.restDeadline);
+
+  return {
+    exerciseIndex:
+      Number.isInteger(exerciseIndex) && exerciseIndex >= 0 ? exerciseIndex : 0,
+    entries,
+    restDeadline: Number.isFinite(restDeadline) && restDeadline > 0 ? restDeadline : 0,
+  };
+};
+
 export async function openSession(
   userId: string,
   planId: string
-): Promise<string> {
+): Promise<OpenWorkoutSession> {
   const { data: existing, error: findError } = await supabase
     .from("workout_sessions")
-    .select("id")
+    .select("id, draft_state")
     .eq("user_id", userId)
     .eq("plan_id", planId)
     .is("finished_at", null)
@@ -345,17 +387,52 @@ export async function openSession(
     .maybeSingle();
 
   if (findError) throw findError;
-  if (existing) return existing.id;
 
-  const { data, error } = await supabase
+  let session = existing;
+
+  if (!session) {
+    const { data, error } = await supabase
+      .from("workout_sessions")
+      .insert({ user_id: userId, plan_id: planId })
+      .select("id, draft_state")
+      .single();
+
+    if (error) throw error;
+    session = data;
+  }
+
+  const { data: savedSets, error: setsError } = await supabase
+    .from("session_sets")
+    .select("plan_exercise_id, exercise_id, set_number, weight_kg, reps")
+    .eq("session_id", session.id)
+    .order("completed_at", { ascending: true });
+
+  if (setsError) throw setsError;
+
+  return {
+    id: session.id,
+    draft: sanearDraft(session.draft_state),
+    completedSets: (savedSets ?? []).map((set) => ({
+      planExerciseId: set.plan_exercise_id,
+      exerciseId: set.exercise_id,
+      number: set.set_number,
+      weightKg: Number(set.weight_kg),
+      reps: set.reps,
+    })),
+  };
+}
+
+export async function saveSessionDraft(
+  sessionId: string,
+  draft: WorkoutSessionDraft
+): Promise<void> {
+  const { error } = await supabase
     .from("workout_sessions")
-    .insert({ user_id: userId, plan_id: planId })
-    .select("id")
-    .single();
+    .update({ draft_state: draft })
+    .eq("id", sessionId)
+    .is("finished_at", null);
 
   if (error) throw error;
-
-  return data.id;
 }
 
 export async function saveSet(
@@ -425,7 +502,7 @@ export async function finishSession(
 
   const { error } = await supabase
     .from("workout_sessions")
-    .update({ finished_at: now })
+    .update({ finished_at: now, draft_state: null })
     .eq("id", sessionId);
 
   if (error) throw error;

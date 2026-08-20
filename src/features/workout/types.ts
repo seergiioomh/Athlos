@@ -69,6 +69,25 @@ export interface SetEntry {
   done: boolean;
 }
 
+/** Estado editable de una sesión abierta. Se guarda aparte de las series
+ * completadas para no convertir un campo a medio escribir en trabajo hecho. */
+export interface WorkoutSessionDraft {
+  exerciseIndex: number;
+  entries: Record<string, SetEntry[]>;
+  /** Marca absoluta para que el descanso continúe tras cerrar la app. */
+  restDeadline: number;
+}
+
+export interface SavedSessionSet extends CompletedSet {
+  planExerciseId: string | null;
+}
+
+export interface OpenWorkoutSession {
+  id: string;
+  draft: WorkoutSessionDraft | null;
+  completedSets: SavedSessionSet[];
+}
+
 /** Una serie ya cerrada, con números, lista para persistir. */
 export interface CompletedSet {
   exerciseId: string;

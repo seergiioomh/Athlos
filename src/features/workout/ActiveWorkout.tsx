@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useSession, workoutKeys } from "./queries";
 import { WorkoutPlan } from "./types";
+import type { OpenWorkoutSession } from "./types";
 import { useWorkoutSession } from "./useWorkoutSession";
 import { useUserId } from "@/features/auth/session";
 
@@ -28,10 +30,49 @@ interface Props {
 }
 
 export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
-  const userId = useUserId()!;
+  const { data: openedSession, isPending, error, refetch } = useSession(plan.id);
 
-  const { data: sessionId } = useSession(plan.id);
-  const session = useWorkoutSession(plan, sessionId);
+  if (isPending || !openedSession) {
+    return (
+      <View style={styles.loading}>
+        {error ? (
+          <>
+            <Text style={styles.loadingError}>
+              No se pudo recuperar el entrenamiento.
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => refetch()}
+              style={styles.retry}
+            >
+              <Text style={styles.retryText}>Intentar de nuevo</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <ActivityIndicator color={HomeColors.primary} />
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <OpenedWorkout
+      plan={plan}
+      openedSession={openedSession}
+      onBack={onBack}
+      onFinish={onFinish}
+    />
+  );
+}
+
+function OpenedWorkout({
+  plan,
+  openedSession,
+  onBack,
+  onFinish,
+}: Props & { openedSession: OpenWorkoutSession }) {
+  const userId = useUserId()!;
+  const session = useWorkoutSession(plan, openedSession);
   const queryClient = useQueryClient();
 
   const finish = async () => {
@@ -51,7 +92,7 @@ export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
     queryClient.invalidateQueries({ queryKey: ["progress"] });
     queryClient.invalidateQueries({ queryKey: ["home"] });
 
-    onFinish(sessionId!);
+    onFinish(openedSession.id);
   };
 
   /**
@@ -172,6 +213,35 @@ export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+
+  loadingError: {
+    textAlign: "center",
+    fontSize: 14,
+    color: HomeColors.errorText,
+  },
+
+  retry: {
+    marginTop: 14,
+    minHeight: 44,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: HomeColors.surface,
+  },
+
+  retryText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: HomeColors.primary,
   },
 
   content: {

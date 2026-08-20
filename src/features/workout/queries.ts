@@ -107,10 +107,11 @@ export function useSession(planId: string | undefined) {
     queryKey: workoutKeys.session(planId ?? "none"),
     queryFn: () => openSession(userId, planId!),
     enabled: Boolean(planId),
-    // Abrir una sesión no es idempotente en el tiempo: no la reintentamos
-    // al volver a la pantalla.
-    staleTime: Infinity,
-    gcTime: Infinity,
+    // Al salir se descarta esta foto: al volver hay que leer el borrador y las
+    // series otra vez, no reutilizar cómo estaban cuando se abrió la pantalla.
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
   });
 }
 

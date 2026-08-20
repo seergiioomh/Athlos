@@ -151,6 +151,8 @@ export interface WorkoutSessionRow {
   energy_during: number | null;
   ate_well: boolean | null;
   discomfort: string | null;
+  /** jsonb; estado de edición recuperable mientras la sesión está abierta. */
+  draft_state: unknown;
 }
 
 export interface SessionSetRow {

@@ -60,6 +60,7 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0046_battle_drop_achievement_points.sql` | Los logros dejan de puntuar en batallas (lo reemplaza a `0045`) |
 | `0047_battle_session_quality.sql` | La adherencia pesa por cumplimiento de series, no solo por asistencia |
 | `0048_leave_active_battle.sql` | Permite abandonar una batalla ya empezada |
+| `0049_workout_session_draft.sql` | Recupera el entrenamiento abierto al cerrar la app |
 
 ### Archivos que no forman parte de la instalación
 

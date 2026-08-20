@@ -97,6 +97,10 @@ Pendiente.
 - **El sueño sale del producto.** Ya no se pregunta al editar el perfil ni se
   envía a ninguna función de IA. La columna antigua permanece sin uso para no
   introducir una migración destructiva.
+- **Una sesión abierta sobrevive al cierre de la app.** `0049` añade
+  `workout_sessions.draft_state`: conserva campos todavía sin cerrar, ejercicio
+  actual y fin del descanso. Al volver se combina con `session_sets`, que sigue
+  mandando sobre qué series están realmente completadas.
 - **Un entrenamiento por día, descansos que aconsejan.** Ver "El calendario dice
   cuándo, el ciclo dice qué" en Conceptos del dominio. Toca la tarjeta de
   Inicio, la pestaña Entrenar y `generate-workout`. **La función hay que
@@ -140,7 +144,7 @@ Pendiente.
 | Supabase, *Redirect URLs* | `athlos://confirm` y `athlos://reset-password` |
 | Supabase, SMTP | El de serie. Pocos correos por hora y **plantillas no editables** |
 | Supabase, registros | Permitidos |
-| Supabase, migraciones | Aplicadas hasta `0043` (verificado el 12 de agosto) |
+| Supabase, migraciones | Aplicadas hasta `0048`; `0049` pendiente de ejecutar |
 | Supabase, funciones | Cinco activas: las tres de IA, `send-reminders` y `close-battles` |
 | Supabase, extensiones | `pg_cron` y `pg_net` activas, cron `enviar-recordatorios` cada hora |
 | Supabase, secretos | `ANTHROPIC_API_KEY` y `CRON_SECRET` |
@@ -265,6 +269,15 @@ devuelve siempre una entrada por serie resuelva el caso que resuelva, y
 cuenta acabará diciendo algo distinto. Al
 terminar aparece una pantalla de cierre con el resumen y tres preguntas de
 sensaciones, que el coach lee al preparar la siguiente sesión.
+
+**Cerrar la app no reinicia el entrenamiento.** Las series marcadas se guardan
+al instante en `session_sets`. Los campos aún abiertos, el ejercicio visible y
+la marca absoluta del descanso se guardan con un debounce corto en
+`workout_sessions.draft_state`, y se fuerza una escritura al pasar la app a
+segundo plano. Al reabrir, `openSession()` recupera ambas fuentes y las mezcla:
+una fila real de `session_sets` siempre gana al JSON. Al terminar se borra el
+borrador, pero las series reales permanecen. No conviertas el borrador en la
+fuente de verdad de lo entrenado: hacerlo falsearía Progreso y Batallas.
 
 **Coach.** Chat con la IA. Puede proponer cambios; el usuario los aplica o no.
 
