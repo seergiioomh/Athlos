@@ -9,6 +9,7 @@ import { StreakBadge } from "@/components/ui/StreakBadge";
 import { useProfile } from "@/features/onboarding/queries";
 import { useStreak } from "@/features/progress/queries";
 import { useLatestPlan } from "@/features/workout/queries";
+import { useTrainingDay } from "@/features/workout/useTrainingDay";
 import { CoachInsightCard } from "./components/CoachInsightCard";
 import { PastWorkoutSheet } from "./components/PastWorkoutSheet";
 import { TodayWorkoutCard } from "./components/TodayWorkoutCard";
@@ -43,6 +44,10 @@ export function HomeScreen() {
   const { data: sessions } = useRecentSessions();
   const { data: stats } = useTrainingStats();
   const { data: streak } = useStreak();
+
+  // Si hoy se entrena, si toca descansar o si ya está hecho. La pestaña
+  // Entrenar mira exactamente lo mismo.
+  const { estado, cargando } = useTrainingDay();
 
   /** Día tocado en "Esta semana", si lo hay. */
   const [viewingDay, setViewingDay] = useState<{
@@ -98,7 +103,12 @@ export function HomeScreen() {
         // Un plan ya hecho no se ofrece: la tarjeta pasa a invitar a
         // preparar el siguiente.
         plan={plan && !plan.completedAt ? plan : null}
+        estado={estado}
+        cargando={cargando}
         onPress={() => router.push("/(tabs)/workout")}
+        // La decisión viaja en la ruta: la pantalla de Entrenar la lee y
+        // prepara la sesión sin volver a preguntar.
+        onForzar={() => router.push("/(tabs)/workout?forzar=1")}
       />
 
       <WorkoutHistory

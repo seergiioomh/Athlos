@@ -272,10 +272,28 @@ Deno.serve(async (req: Request) => {
        goal, goal_notes, focus_areas, experience, technique_level,
        days_per_week, training_days, session_minutes, equipment, sport,
        sport_days, daily_activity, sleep_hours, cardio, limitations,
-       avoid_exercises`,
+       avoid_exercises, timezone`,
     )
     .eq("id", userId)
     .maybeSingle();
+
+  // Un entrenamiento por día. La app ya lo impide —esconde el botón y enseña
+  // la cuenta atrás—, así que llegar aquí significa que alguien se saltó la
+  // pantalla, y el reloj del móvil se cambia en dos toques.
+  //
+  // Va antes del catálogo y de Claude a propósito: rechazar aquí no gasta
+  // llamada ni cuota diaria. El freno también ahorra dinero, no solo cierra
+  // un hueco.
+  //
+  // El día es el del usuario, no el del servidor: a las 23:30 en Madrid ya es
+  // mañana en UTC. Sin zona horaria se asume `Europe/Madrid`, igual que en
+  // `users_to_remind()`.
+  if (await yaEntrenoHoy(supabase, userId, profile?.timezone as string | null)) {
+    return json(
+      { error: "Ya has entrenado hoy. Mañana preparamos el siguiente." },
+      409,
+    );
+  }
 
   // El filtro por material se hace en la consulta, no en el prompt: si un
   // ejercicio no le sirve, el modelo no debería ni verlo.
@@ -575,6 +593,66 @@ async function recentHistory(
     .limit(8);
 
   return data ?? [];
+}
+
+/** La fecha de un instante en la zona horaria de alguien: "2026-08-20". */
+function fechaLocal(instante: Date, zona: string): string {
+  // "en-CA" da el formato ISO ya ordenado (año-mes-día), así que dos fechas se
+  // comparan como cadenas sin tener que trocearlas.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: zona,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instante);
+}
+
+/**
+ * Si el usuario ya terminó algún entrenamiento en lo que va de su día.
+ *
+ * Se piden las sesiones de las últimas 48 horas y se convierten aquí. La
+ * ventana es de 48 y no de 24 porque el corte del día depende del huso, y hay
+ * husos a ±14 h de UTC: con 24 h, alguien en Auckland podría quedarse fuera de
+ * la consulta habiendo entrenado hoy.
+ *
+ * Una zona horaria inválida —una columna vieja, un valor a mano— haría que
+ * `Intl` lanzara y tumbara la generación. Ante la duda se deja pasar: este
+ * freno es una comodidad, no una medida de seguridad, y bloquear a alguien por
+ * un dato corrupto sí sería un problema de verdad.
+ */
+async function yaEntrenoHoy(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  timezone: string | null,
+): Promise<boolean> {
+  const zona = timezone ?? "Europe/Madrid";
+  const ahora = new Date();
+
+  const desde = new Date(ahora.getTime() - 48 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("workout_sessions")
+    .select("finished_at")
+    .eq("user_id", userId)
+    .not("finished_at", "is", null)
+    .gte("finished_at", desde);
+
+  if (error) {
+    console.error("Fallo comprobando si ya entrenó hoy", error);
+    return false;
+  }
+
+  try {
+    const hoy = fechaLocal(ahora, zona);
+
+    return (data ?? []).some(
+      (sesion) =>
+        fechaLocal(new Date(sesion.finished_at as string), zona) === hoy,
+    );
+  } catch (fallo) {
+    console.error("Zona horaria no válida", zona, fallo);
+    return false;
+  }
 }
 
 async function consumeAiUsage(

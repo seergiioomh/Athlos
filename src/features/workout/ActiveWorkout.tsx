@@ -1,4 +1,5 @@
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -51,6 +52,30 @@ export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
     queryClient.invalidateQueries({ queryKey: ["home"] });
 
     onFinish(sessionId!);
+  };
+
+  /**
+   * Terminar cierra el día: hasta mañana no se prepara otro entrenamiento. Por
+   * eso se pregunta, y no se preguntaba antes: un toque de más en el último
+   * ejercicio dejaba al usuario fuera hasta el día siguiente sin haber querido.
+   *
+   * Solo cuando quedan series sin marcar. Con todo cumplido no hay nada
+   * ambiguo que confirmar, y preguntar sería una traba de las que sobran.
+   */
+  const confirmarFin = () => {
+    if (session.allSetsDone) {
+      finish();
+      return;
+    }
+
+    Alert.alert(
+      "¿Terminamos por hoy?",
+      "Te quedan series sin marcar. Al terminar se guarda lo hecho y hasta mañana no preparamos el siguiente entrenamiento.",
+      [
+        { text: "Seguir entrenando", style: "cancel" },
+        { text: "Terminar", style: "destructive", onPress: finish },
+      ]
+    );
   };
 
   return (
@@ -122,7 +147,9 @@ export function ActiveWorkout({ plan, onBack, onFinish }: Props) {
 
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={session.isLastExercise ? finish : session.nextExercise}
+            onPress={
+              session.isLastExercise ? confirmarFin : session.nextExercise
+            }
             style={[
               styles.primary,
               // Sin series cerradas el botón sigue activo: el usuario

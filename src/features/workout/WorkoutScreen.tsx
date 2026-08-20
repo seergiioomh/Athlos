@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -22,13 +22,30 @@ import { errorMessage } from "@/utils/errors";
 import { ActiveWorkout } from "./ActiveWorkout";
 import { WorkoutCompletionScreen } from "./WorkoutCompletionScreen";
 import { useGeneratePlan, useLatestPlan } from "./queries";
+import { cuentaAtras, nombreProximoDia } from "./schedule";
+import { useTrainingDay } from "./useTrainingDay";
 
 export function WorkoutScreen() {
   const router = useRouter();
+
+  /**
+   * El usuario ya dijo "entrenar igualmente" en Inicio, en un día de descanso.
+   *
+   * Viaja en la ruta porque sin esto la decisión se perdía al cambiar de
+   * pantalla y aquí volvíamos a preguntarle lo mismo: dos toques para decir
+   * una sola cosa, que es justo la clase de traba que no queremos.
+   */
+  const { forzar } = useLocalSearchParams<{ forzar?: string }>();
+  const forzado = forzar === "1";
   const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
 
   const { data: plan, isPending, error, refetch } = useLatestPlan();
   const generate = useGeneratePlan();
+
+  // El mismo estado que pinta la tarjeta de Inicio. Tienen que mirar lo
+  // mismo: si allí se esconde el botón y aquí se sigue generando, la regla no
+  // existe, porque a esta pantalla se llega tocando la pestaña.
+  const { estado, cargando: diaCargando } = useTrainingDay();
 
   const { data: cycle, isPending: cyclePending } = useActiveCycle();
   const { data: draft } = useDraftCycle();
@@ -54,17 +71,49 @@ export function WorkoutScreen() {
   const attempted = useRef(false);
 
   useEffect(() => {
-    // Solo se genera solo la primera vez. Después de terminar uno, el
-    // siguiente lo pide el usuario: es él quien sabe cuándo vuelve.
-    if (isPending || error || plan || attempted.current) return;
+    if (isPending || error || attempted.current) return;
 
-    // Y nunca antes de tener un ciclo aprobado: la sesión se diseña a partir
-    // de él, así que generarla antes sería tirarla a la basura.
+    // Nunca antes de tener un ciclo aprobado: la sesión se diseña a partir de
+    // él, así que generarla antes sería tirarla a la basura.
     if (!cycle) return;
+
+    // Con el entrenamiento ya preparado no hay nada que generar, y si hoy ya
+    // se ha entrenado tampoco.
+    if (pending) return;
+
+    // Se espera a que se sepa qué día es: hasta que llegan el perfil y las
+    // sesiones, el estado dice "toca" por defecto, y sin esta espera generaría
+    // en un día de descanso antes de enterarse.
+    if (diaCargando || estado.estado === "hecho") return;
+
+    // Se genera sola en dos casos y solo en esos:
+    //
+    // - **La primera vez**, sin ningún plan todavía, para que la primera
+    //   visita no se quede en una pantalla vacía.
+    // - **Cuando el usuario ya ha dicho que sí** desde Inicio, en un día de
+    //   descanso. Volver a preguntárselo aquí sería el segundo toque para la
+    //   misma decisión.
+    //
+    // Fuera de ahí lo pide él: cada generación es una llamada a Claude con
+    // cuota diaria, y gastarla solo porque alguien tocó la pestaña es tirar
+    // el dinero y la cuota.
+    const generarSola = forzado || (!plan && estado.estado === "toca");
+
+    if (!generarSola) return;
 
     attempted.current = true;
     generate.mutate(undefined);
-  }, [isPending, error, plan, generate, cycle]);
+  }, [
+    isPending,
+    error,
+    plan,
+    pending,
+    generate,
+    cycle,
+    diaCargando,
+    estado.estado,
+    forzado,
+  ]);
 
   // Entrenar es una pestaña raíz: si se llegó tocando la tab no hay
   // historial que deshacer, así que caemos a Inicio.
@@ -145,6 +194,43 @@ export function WorkoutScreen() {
             <Text style={styles.body}>{message(approve.error)}</Text>
           )}
         </ScrollView>
+      ) : estado.estado === "hecho" ? (
+        // Va antes que el entrenamiento pendiente a propósito: si hoy ya has
+        // entrenado, da igual que quede un plan sin hacer. Mañana sigue ahí.
+        <Centered>
+          <Text style={styles.title}>Ya has entrenado hoy</Text>
+          <Text style={styles.body}>
+            Buen trabajo. Lo que has levantado se convierte en músculo mientras
+            descansas, así que por hoy hemos terminado.
+          </Text>
+          <Text style={styles.countdown}>
+            Siguiente entrenamiento en {cuentaAtras(estado.minutosRestantes)}
+          </Text>
+        </Centered>
+      ) : estado.estado === "descanso" && !forzado ? (
+        // Aquí no se bloquea nada: se avisa y se deja el botón. Los días de
+        // entreno son una intención declarada, no un contrato, y quien se
+        // saltó el viernes quiere entrenar el sábado.
+        <Centered>
+          <Text style={styles.title}>Hoy toca descansar</Text>
+          <Text style={styles.body}>
+            {estado.proximo
+              ? `Según los días que elegiste, vuelves ${nombreProximoDia(estado.proximo)}. Pero decides tú: si hoy te apetece, entrenamos.`
+              : "Según los días que elegiste, hoy no entrenas. Pero decides tú: si hoy te apetece, entrenamos."}
+          </Text>
+
+          <Action
+            label={generate.isPending ? "Preparando…" : "Entrenar igualmente"}
+            onPress={retry}
+            disabled={generate.isPending}
+          />
+
+          {/* El fallo se enseña aquí y no más abajo: esta rama corta la
+              cadena, así que la pantalla de error general no se alcanzaría. */}
+          {generate.error && (
+            <Text style={styles.body}>{message(generate.error)}</Text>
+          )}
+        </Centered>
       ) : pending && pending.exercises.length > 0 ? (
         <ActiveWorkout
           // Un plan nuevo es un entrenamiento nuevo: la `key` fuerza el
@@ -260,6 +346,18 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: HomeColors.textSecondary,
     textAlign: "center",
+  },
+
+  countdown: {
+    marginTop: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 18,
+    overflow: "hidden",
+    backgroundColor: HomeColors.primarySoft,
+    fontSize: 15,
+    fontWeight: "600",
+    color: HomeColors.primary,
   },
 
   button: {
