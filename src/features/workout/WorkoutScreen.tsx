@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { RestRing } from "@/components/ui/RestRing";
 import { HomeColors } from "@/features/home/home-theme";
 import { WeeklySplitCard } from "@/features/profile/components/WeeklySplitCard";
 import {
@@ -198,12 +199,12 @@ export function WorkoutScreen() {
         // Va antes que el entrenamiento pendiente a propósito: si hoy ya has
         // entrenado, da igual que quede un plan sin hacer. Mañana sigue ahí.
         <Centered>
-          <Text style={styles.title}>Ya has entrenado hoy</Text>
+          {/* El mismo anillo que la tarjeta de Inicio, más grande porque aquí
+              hay pantalla entera. Cuentan lo mismo, así que se enseñan igual. */}
+          <RestRing minutosRestantes={estado.minutosRestantes} size={116} />
+
+          <Text style={styles.title}>Hecho por hoy</Text>
           <Text style={styles.body}>
-            Buen trabajo. Lo que has levantado se convierte en músculo mientras
-            descansas, así que por hoy hemos terminado.
-          </Text>
-          <Text style={styles.countdown}>
             Siguiente entrenamiento en {cuentaAtras(estado.minutosRestantes)}
           </Text>
         </Centered>
@@ -346,18 +347,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: HomeColors.textSecondary,
     textAlign: "center",
-  },
-
-  countdown: {
-    marginTop: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 18,
-    overflow: "hidden",
-    backgroundColor: HomeColors.primarySoft,
-    fontSize: 15,
-    fontWeight: "600",
-    color: HomeColors.primary,
   },
 
   button: {

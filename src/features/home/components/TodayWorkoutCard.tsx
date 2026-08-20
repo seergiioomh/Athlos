@@ -1,12 +1,12 @@
-import { Moon02Icon, Tick02Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { Moon02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
 
 import { AthlosButton } from "@/components/ui/AthlosButton";
 import { Icon } from "@/components/ui/Icon";
 import { MuscleMap } from "@/components/ui/MuscleMap";
+import { RestRing } from "@/components/ui/RestRing";
 import {
   cuentaAtras,
   nombreProximoDia,
@@ -199,65 +199,6 @@ export function TodayWorkoutCard({
   );
 }
 
-const ANILLO = 76;
-const TRAZO = 6;
-
-/**
- * Anillo con la marca de visto: cuánto queda para poder entrenar otra vez.
- *
- * El arco mide **el día**, no la espera. La espera empieza cuando cada uno
- * termina —a las 8:00 o a las 21:00— así que un arco sobre ella no querría
- * decir lo mismo para dos personas; el día sí es igual para todos y no hay que
- * explicarlo. A medianoche está lleno, que es justo cuando se desbloquea.
- */
-function RestRing({ minutosRestantes }: { minutosRestantes: number }) {
-  const radio = (ANILLO - TRAZO) / 2;
-  const vuelta = 2 * Math.PI * radio;
-
-  const transcurrido = Math.min(1, Math.max(0, 1 - minutosRestantes / (24 * 60)));
-
-  return (
-    <View style={styles.ring}>
-      {/* El giro va en el estilo de la vista y no en props del SVG: sin él el
-          arco arrancaría a las tres en punto, porque los ángulos de SVG parten
-          del eje X. Como el lienzo es cuadrado, girarlo no mueve sus límites, y
-          la marca de visto queda fuera del giro. */}
-      <Svg
-        width={ANILLO}
-        height={ANILLO}
-        style={[StyleSheet.absoluteFill, styles.ringRotado]}
-      >
-        <Circle
-          cx={ANILLO / 2}
-          cy={ANILLO / 2}
-          r={radio}
-          fill="none"
-          stroke={HomeColors.surfaceHighlight}
-          strokeWidth={TRAZO}
-        />
-        <Circle
-          cx={ANILLO / 2}
-          cy={ANILLO / 2}
-          r={radio}
-          fill="none"
-          stroke={HomeColors.primary}
-          strokeWidth={TRAZO}
-          strokeLinecap="round"
-          strokeDasharray={vuelta}
-          strokeDashoffset={vuelta * (1 - transcurrido)}
-        />
-      </Svg>
-
-      <HugeiconsIcon
-        icon={Tick02Icon}
-        size={34}
-        color={HomeColors.primary}
-        strokeWidth={2.6}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   card: { marginTop: 30, backgroundColor: HomeColors.surface, borderRadius: 28, padding: 24 },
   heading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
@@ -270,8 +211,6 @@ const styles = StyleSheet.create({
   chipRestText: { fontSize: 12, fontWeight: "700", color: HomeColors.teal },
 
   doneRow: { marginTop: 18, flexDirection: "row", alignItems: "center", gap: 18 },
-  ring: { width: ANILLO, height: ANILLO, alignItems: "center", justifyContent: "center" },
-  ringRotado: { transform: [{ rotate: "-90deg" }] },
   doneTitle: { marginTop: 0 },
   doneHint: { marginTop: 4, fontSize: 15, color: HomeColors.textSecondary },
 
