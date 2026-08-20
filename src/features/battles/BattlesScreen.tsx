@@ -8,6 +8,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -26,7 +27,7 @@ import { BattleInfoSheet } from "./components/BattleInfoSheet";
 import { BattleLeaderboard } from "./components/BattleLeaderboard";
 import { BattleLobby } from "./components/BattleLobby";
 import { daysLeftLabel } from "./format";
-import { useBattleScore, useCurrentBattle } from "./queries";
+import { useBattleScore, useCurrentBattle, useLeaveBattle } from "./queries";
 
 /**
  * Cuántos días se sigue enseñando el resultado de una batalla terminada.
@@ -46,12 +47,24 @@ export function BattlesScreen() {
   const meId = useUserId()!;
 
   const [explaining, setExplaining] = useState(false);
+  /**
+   * Cerrar el resultado sin esperar a que caduque.
+   *
+   * Una batalla terminada no impide crear otra en la base, pero la pantalla
+   * seguía enseñando su marcador durante `RESULT_DAYS` y no ofrecía nada más:
+   * quien quería revancha al día siguiente se quedaba mirando el resultado una
+   * semana.
+   */
+  const [resultadoCerrado, setResultadoCerrado] = useState(false);
 
   const { data: battle, isPending, error } = useCurrentBattle();
 
   // La clasificación solo existe una vez empezada.
   const activa = battle?.status === "active";
-  const terminada = battle?.status === "finished" && recienTerminada(battle.endsAt);
+  const terminada =
+    battle?.status === "finished" &&
+    recienTerminada(battle.endsAt) &&
+    !resultadoCerrado;
 
   const { data: score } = useBattleScore(
     activa || terminada ? battle?.id : undefined
@@ -65,6 +78,8 @@ export function BattlesScreen() {
 
     router.replace("/(tabs)");
   };
+
+  const leave = useLeaveBattle();
 
   const ganador = score?.[0];
   const heGanado = terminada && ganador?.userId === meId;
@@ -167,6 +182,42 @@ export function BattlesScreen() {
                 <ActivityIndicator color={HomeColors.primary} />
               </View>
             )}
+
+            {terminada ? (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setResultadoCerrado(true)}
+                style={styles.primary}
+              >
+                <Text style={styles.primaryText}>Empezar otra batalla</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                disabled={leave.isPending}
+                onPress={() =>
+                  Alert.alert(
+                    "Salir de la batalla",
+                    "Dejarás de aparecer en la clasificación y no podrás volver a entrar, porque la entrada se cerró al empezar.",
+                    [
+                      { text: "Cancelar", style: "cancel" },
+                      {
+                        text: "Salir",
+                        style: "destructive",
+                        onPress: () => leave.mutate(battle.id),
+                      },
+                    ]
+                  )
+                }
+                style={styles.ghost}
+              >
+                <Text style={styles.ghostText}>Salir de la batalla</Text>
+              </TouchableOpacity>
+            )}
+
+            {leave.error && (
+              <Text style={styles.error}>{errorMessage(leave.error)}</Text>
+            )}
           </View>
         ) : (
           <View style={styles.body}>
@@ -237,6 +288,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: HomeColors.primary,
   },
+
+  primary: {
+    height: 52,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: HomeColors.primary,
+  },
+
+  primaryText: { fontSize: 16, fontWeight: "700", color: HomeColors.onPrimary },
+
+  // Discreto a propósito: salir de una batalla en marcha no es lo que se viene
+  // a hacer aquí, pero tiene que existir.
+  ghost: { height: 46, alignItems: "center", justifyContent: "center" },
+  ghostText: { fontSize: 14, fontWeight: "600", color: HomeColors.textSecondary },
 
   resultText: { fontSize: 17, fontWeight: "700", color: HomeColors.text },
   resultTextWin: { color: HomeColors.primary },

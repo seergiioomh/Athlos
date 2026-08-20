@@ -249,7 +249,7 @@ y el estado de sala de espera.
 |---|---|
 | `battle_preview(codigo)` | Lo que ves antes de entrar: nombre, quién la creó y cuántos van. **La única que puede llamar quien aún no participa**, así que no devuelve nada más |
 | `join_battle(codigo)` | Entrar, validando aforo, estado y que no tengas otra en curso |
-| `leave_battle(id)` | Salir de una sala de espera. Quien la creó no puede: tiene que cancelar |
+| `leave_battle(id)` | Salir de una sala de espera **o de una batalla en marcha** (`0048`). En sala de espera el creador no puede: tiene que cancelar |
 | `cancel_battle(id)` | Cancelar la sala. Solo el creador, solo antes de empezar |
 | `expire_stale_lobbies()` | Cancela salas de más de 7 días. La llama el cron en el paso 3 |
 | `battle_max_players()` | El aforo, 8, en un solo sitio |
@@ -263,6 +263,13 @@ Dos detalles que no son adorno:
   Como solo se permite una batalla a la vez, una sala que nunca arranca dejaría
   a su creador sin poder crear ninguna otra jamás. `expire_stale_lobbies()`
   cubre el caso de quien ni siquiera entra a cancelarla.
+- **Se puede abandonar una batalla ya empezada** (`0048`). Al principio no se
+  permitía, para proteger la clasificación de los demás, pero eso no se
+  sostenía: `battle_ranking` puntúa a cada participante por separado, así que
+  irse no cambia los puntos de nadie, solo quita una fila. Lo que sí permite es
+  que quien va perdiendo se borre para no salir último — se acepta a cambio de
+  no encerrar a la gente hasta 4 semanas. Una vez fuera no se puede volver: la
+  entrada se cerró al empezar.
 - **`expire_stale_lobbies()` no la puede llamar la app.** No comprueba quién
   llama porque la invoca el cron, así que se le revoca el permiso a `anon` y
   `authenticated`.

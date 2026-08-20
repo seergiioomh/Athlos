@@ -59,6 +59,7 @@ registrarse no abre sesión hasta abrir el enlace del correo.
 | `0045_battle_achievement_points_fix.sql` | Arregla puntos de logro en batallas: exige haber entrenado |
 | `0046_battle_drop_achievement_points.sql` | Los logros dejan de puntuar en batallas (lo reemplaza a `0045`) |
 | `0047_battle_session_quality.sql` | La adherencia pesa por cumplimiento de series, no solo por asistencia |
+| `0048_leave_active_battle.sql` | Permite abandonar una batalla ya empezada |
 
 ### Archivos que no forman parte de la instalación
 
