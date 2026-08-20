@@ -244,10 +244,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: HomeColors.primary,
+    backgroundColor: HomeColors.pink,
   },
 
-  saveDisabled: { backgroundColor: HomeColors.primaryMuted },
+  saveDisabled: { backgroundColor: HomeColors.pinkSoft },
 
-  saveText: { fontSize: 16, fontWeight: "700", color: HomeColors.onPrimary },
+  saveText: { fontSize: 16, fontWeight: "700", color: HomeColors.text },
 });

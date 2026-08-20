@@ -19,6 +19,8 @@ interface Props {
   loading: boolean;
   visible: boolean;
   onClose: () => void;
+  accentColor?: string;
+  accentSoftColor?: string;
 }
 
 const formatDate = (date: Date) =>
@@ -45,6 +47,8 @@ export function PastWorkoutSheet({
   loading,
   visible,
   onClose,
+  accentColor = HomeColors.primary,
+  accentSoftColor = HomeColors.primarySoft,
 }: Props) {
   return (
     <Modal
@@ -60,7 +64,11 @@ export function PastWorkoutSheet({
 
         <View style={styles.header}>
           <View style={styles.headerText}>
-            {date && <Text style={styles.date}>{formatDate(date)}</Text>}
+            {date && (
+              <Text style={[styles.date, { color: accentColor }]}>
+                {formatDate(date)}
+              </Text>
+            )}
             <Text style={styles.title}>Entrenamiento realizado</Text>
           </View>
 
@@ -88,7 +96,11 @@ export function PastWorkoutSheet({
           {loading ? (
             <Text style={styles.empty}>Cargando…</Text>
           ) : workout?.length ? (
-            <CompletedExerciseList exercises={workout} />
+            <CompletedExerciseList
+              exercises={workout}
+              accentColor={accentColor}
+              accentSoftColor={accentSoftColor}
+            />
           ) : (
             <Text style={styles.empty}>
               No hay series registradas para este entrenamiento.
@@ -100,11 +112,21 @@ export function PastWorkoutSheet({
   );
 }
 
-function CompletedExerciseList({ exercises }: { exercises: CompletedWorkoutExercise[] }) {
+function CompletedExerciseList({
+  exercises,
+  accentColor,
+  accentSoftColor,
+}: {
+  exercises: CompletedWorkoutExercise[];
+  accentColor: string;
+  accentSoftColor: string;
+}) {
   return exercises.map((exercise, index) => (
     <View key={exercise.exerciseId} style={styles.exercise}>
-      <View style={styles.position}>
-        <Text style={styles.positionText}>{index + 1}</Text>
+      <View style={[styles.position, { backgroundColor: accentSoftColor }]}>
+        <Text style={[styles.positionText, { color: accentColor }]}>
+          {index + 1}
+        </Text>
       </View>
       <View style={styles.exerciseDetails}>
         <Text style={styles.exerciseName}>{exercise.name}</Text>

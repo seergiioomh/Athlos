@@ -66,10 +66,14 @@ export interface WeekSession {
 const HISTORY_MARGIN_DAYS = 10;
 
 export async function fetchRecentSessions(
-  userId: string
+  userId: string,
+  daysBack = HISTORY_MARGIN_DAYS
 ): Promise<WeekSession[]> {
   const since = new Date();
-  since.setDate(since.getDate() - HISTORY_MARGIN_DAYS);
+  since.setDate(since.getDate() - daysBack);
+  // La tira trabaja con días de calendario. Si conservásemos la hora actual,
+  // el primer día perdería las sesiones hechas antes de esa hora.
+  since.setHours(0, 0, 0, 0);
 
   const { data, error } = await supabase
     .from("workout_sessions")

@@ -2,10 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { homeKeys } from "@/features/home/queries";
 import { useProfile } from "@/features/onboarding/queries";
-import { recordWeight } from "@/services/home";
+import { fetchRecentSessions, recordWeight } from "@/services/home";
 import {
   fetchExerciseProgress,
-  fetchPeriodSummary,
   fetchProgressSummary,
   fetchStreak,
   fetchWeightRange,
@@ -19,8 +18,8 @@ export const progressKeys = {
     ["progress", "weight", userId, days] as const,
   streak: (userId: string, maxGap: number) =>
     ["progress", "streak", userId, maxGap] as const,
-  period: (userId: string, days: number) =>
-    ["progress", "period", userId, days] as const,
+  sessions: (userId: string, days: number) =>
+    ["progress", "sessions", userId, days] as const,
 };
 
 /**
@@ -62,21 +61,22 @@ export function useStreak() {
   });
 }
 
-export function usePeriodSummary(days: number) {
-  const userId = useUserId()!;
-
-  return useQuery({
-    queryKey: progressKeys.period(userId, days),
-    queryFn: () => fetchPeriodSummary(userId, days),
-  });
-}
-
 export function useWeightRange(days: number) {
   const userId = useUserId()!;
 
   return useQuery({
     queryKey: progressKeys.weight(userId, days),
     queryFn: () => fetchWeightRange(userId, days),
+  });
+}
+
+export function useWorkoutHistory(days: number) {
+  const userId = useUserId()!;
+
+  return useQuery({
+    queryKey: progressKeys.sessions(userId, days),
+    // `days` incluye hoy; el servicio recibe cuántos días debe retroceder.
+    queryFn: () => fetchRecentSessions(userId, Math.max(days - 1, 0)),
   });
 }
 

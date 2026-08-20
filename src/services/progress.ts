@@ -9,15 +9,6 @@ export interface ProgressSummary {
   lastSession: string | null;
 }
 
-export interface PeriodSummary {
-  sessionsCurrent: number;
-  sessionsPrevious: number;
-  setsCurrent: number;
-  setsPrevious: number;
-  volumeCurrentKg: number;
-  volumePreviousKg: number;
-}
-
 export interface ExerciseProgress {
   exerciseId: string;
   name: string;
@@ -51,36 +42,6 @@ export async function fetchProgressSummary(
     totalReps: Number(row.total_reps),
     totalVolumeKg: Number(row.total_volume_kg),
     lastSession: row.last_session,
-  };
-}
-
-/** Totales del periodo seleccionado, contra el mismo número de días anterior. */
-export async function fetchPeriodSummary(
-  userId: string,
-  days: number
-): Promise<PeriodSummary> {
-  const { data, error } = await supabase
-    .rpc("progress_period_summary", { p_user_id: userId, p_days: days })
-    .single();
-
-  if (error) throw error;
-
-  const row = data as {
-    sessions_current: number;
-    sessions_previous: number;
-    sets_current: number;
-    sets_previous: number;
-    volume_current: number;
-    volume_previous: number;
-  };
-
-  return {
-    sessionsCurrent: Number(row.sessions_current),
-    sessionsPrevious: Number(row.sessions_previous),
-    setsCurrent: Number(row.sets_current),
-    setsPrevious: Number(row.sets_previous),
-    volumeCurrentKg: Number(row.volume_current),
-    volumePreviousKg: Number(row.volume_previous),
   };
 }
 

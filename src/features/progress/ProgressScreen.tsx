@@ -1,5 +1,3 @@
-import { AnalyticsUpIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -13,19 +11,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { HomeColors } from "@/features/home/home-theme";
-import { levelFromStats } from "@/features/home/level";
+import { PastWorkoutSheet } from "@/features/home/components/PastWorkoutSheet";
+import { useCompletedWorkout } from "@/features/home/queries";
 import { useProfile } from "@/features/onboarding/queries";
 import { errorMessage } from "@/utils/errors";
-import { ActivityStats } from "./components/ActivityStats";
 import { ExerciseMarks } from "./components/ExerciseMarks";
+import { TrainingHeatmap } from "./components/TrainingHeatmap";
 import { WeightChart } from "./components/WeightChart";
 import { WeightLogModal } from "./components/WeightLogModal";
 import {
   useExerciseProgress,
-  usePeriodSummary,
-  useProgressSummary,
   useRecordWeight,
   useWeightRange,
+  useWorkoutHistory,
 } from "./queries";
 import { goodWeightDirection } from "./weight-goal";
 
@@ -59,18 +57,18 @@ const DELTA_TEXT_TONE_STYLES = {
 export function ProgressScreen() {
   const [days, setDays] = useState(30);
   const [logging, setLogging] = useState(false);
+  const [viewingDay, setViewingDay] = useState<{
+    sessionId: string;
+    date: Date;
+  } | null>(null);
 
   const { data: weight, isPending: weightPending } = useWeightRange(days);
-  const { data: summary } = useProgressSummary();
-  const { data: periodSummary } = usePeriodSummary(days);
   const { data: exercises } = useExerciseProgress();
   const { data: profile } = useProfile();
+  const { data: sessions } = useWorkoutHistory(28);
+  const { data: viewingWorkout, isPending: viewingWorkoutPending } =
+    useCompletedWorkout(viewingDay?.sessionId ?? null);
   const record = useRecordWeight();
-
-  const level = levelFromStats({
-    finishedSessions: summary?.finishedSessions ?? 0,
-    completedSets: summary?.totalSets ?? 0,
-  });
 
   const history = weight ?? [];
   const current = history[history.length - 1]?.weightKg;
@@ -110,22 +108,6 @@ export function ProgressScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.headerLeft}>
-              <View style={styles.iconBox}>
-                <HugeiconsIcon
-                  icon={AnalyticsUpIcon}
-                  size={20}
-                  color={HomeColors.pink}
-                  strokeWidth={2}
-                />
-              </View>
-
-              <View style={styles.headerTitles}>
-                <Text style={styles.cardTitle}>Tu evolución</Text>
-                <Text style={styles.cardLabel}>Peso corporal (kg)</Text>
-              </View>
-            </View>
-
-            <View style={styles.headerRight}>
               {current !== undefined ? (
                 <View style={styles.currentRow}>
                   <Text style={styles.current}>{kg(current)}</Text>
@@ -134,7 +116,9 @@ export function ProgressScreen() {
               ) : (
                 <Text style={styles.current}>—</Text>
               )}
+            </View>
 
+            <View style={styles.headerRight}>
               {history.length > 1 && (
                 <View style={[styles.delta, DELTA_TONE_STYLES[deltaTone]]}>
                   <Text
@@ -149,19 +133,21 @@ export function ProgressScreen() {
             </View>
           </View>
 
-          {weightPending ? (
-            <View style={styles.chartPlaceholder}>
-              <ActivityIndicator color={HomeColors.pink} />
-            </View>
-          ) : history.length === 0 ? (
-            <View style={styles.chartPlaceholder}>
-              <Text style={styles.emptyText}>
-                Sin registros en este periodo.
-              </Text>
-            </View>
-          ) : (
-            <WeightChart history={history} />
-          )}
+          <View style={styles.chartArea}>
+            {weightPending ? (
+              <View style={styles.chartPlaceholder}>
+                <ActivityIndicator color={HomeColors.pink} />
+              </View>
+            ) : history.length === 0 ? (
+              <View style={styles.chartPlaceholder}>
+                <Text style={styles.emptyText}>
+                  Sin registros en este periodo.
+                </Text>
+              </View>
+            ) : (
+              <WeightChart history={history} />
+            )}
+          </View>
 
           <TouchableOpacity
             activeOpacity={0.85}
@@ -172,8 +158,12 @@ export function ProgressScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ------------------------------------------------------- resumen */}
-        <ActivityStats days={days} summary={periodSummary} level={level} />
+        <TrainingHeatmap
+          sessions={sessions ?? []}
+          onSelectDay={(sessionId, date) =>
+            setViewingDay({ sessionId, date })
+          }
+        />
 
         {/* ------------------------------------------------------- fuerza */}
         <Text style={styles.section}>Tus marcas</Text>
@@ -192,6 +182,16 @@ export function ProgressScreen() {
         onSave={(value) =>
           record.mutate(value, { onSuccess: () => setLogging(false) })
         }
+      />
+
+      <PastWorkoutSheet
+        workout={viewingWorkout ?? null}
+        date={viewingDay?.date ?? null}
+        loading={viewingWorkoutPending}
+        visible={Boolean(viewingDay)}
+        onClose={() => setViewingDay(null)}
+        accentColor={HomeColors.pink}
+        accentSoftColor={HomeColors.pinkSoft}
       />
     </SafeAreaView>
   );
@@ -233,26 +233,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
 
-  iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: HomeColors.pinkSoft,
-  },
-
-  headerTitles: { flexShrink: 1 },
-
   headerRight: { alignItems: "flex-end", gap: 6 },
-
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: HomeColors.text,
-  },
-
-  cardLabel: { fontSize: 13, color: HomeColors.textSecondary },
 
   currentRow: { flexDirection: "row", alignItems: "baseline", gap: 5 },
 
@@ -279,6 +260,8 @@ const styles = StyleSheet.create({
   deltaText: { fontSize: 12, fontWeight: "700", fontVariant: ["tabular-nums"] },
 
   ranges: { marginTop: 24 },
+
+  chartArea: { marginTop: 12 },
 
   chartPlaceholder: {
     height: 160,

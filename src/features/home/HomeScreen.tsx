@@ -113,7 +113,6 @@ export function HomeScreen() {
 
       <WorkoutHistory
         sessions={sessions ?? []}
-        onPress={() => router.push("/(tabs)/progress")}
         onSelectDay={(sessionId, date) => setViewingDay({ sessionId, date })}
       />
 

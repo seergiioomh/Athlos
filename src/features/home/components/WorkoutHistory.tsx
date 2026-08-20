@@ -5,7 +5,6 @@ import type { WeekSession } from "@/services/home";
 import { HomeColors } from "../home-theme";
 
 type Props = {
-  onPress: () => void;
   /**
    * Al tocar un día con entrenamiento guardado. La fecha es la del día
    * tocado, no la del plan: una sesión de madrugada podría quedar registrada
@@ -63,7 +62,7 @@ const buildDays = (sessions: WeekSession[]) => {
   });
 };
 
-export function WorkoutHistory({ onPress, onSelectDay, sessions }: Props) {
+export function WorkoutHistory({ onSelectDay, sessions }: Props) {
   const days = buildDays(sessions);
   const list = useRef<FlatList>(null);
   const centered = useRef(false);
@@ -95,7 +94,6 @@ export function WorkoutHistory({ onPress, onSelectDay, sessions }: Props) {
   };
 
   return <View style={styles.container}>
-    <View style={styles.heading}><Text style={styles.title}>Esta semana</Text><TouchableOpacity onPress={onPress}><Text style={styles.link}>Ver progreso</Text></TouchableOpacity></View>
     <FlatList
       ref={list}
       horizontal
@@ -130,8 +128,7 @@ export function WorkoutHistory({ onPress, onSelectDay, sessions }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { marginTop: 28 }, heading: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  title: { fontSize: 20, fontWeight: "700", color: HomeColors.text }, link: { fontSize: 14, fontWeight: "600", color: HomeColors.primary },
+  container: { marginTop: 28 },
   list: { gap: CARD_GAP, paddingRight: 16 }, card: { width: CARD_WIDTH, height: 82, backgroundColor: HomeColors.surface, borderRadius: 24, justifyContent: "center", alignItems: "center" },
   selectedCard: { backgroundColor: HomeColors.surfaceHighlight }, selectedText: { color: HomeColors.text }, day: { fontSize: 14, color: HomeColors.textTertiary, marginBottom: 6 },
   date: { fontSize: 22, fontWeight: "700", color: HomeColors.textSecondary }, dot: { width: 8, height: 8, borderRadius: 4, marginTop: 8 },
