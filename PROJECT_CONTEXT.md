@@ -83,6 +83,19 @@ aplicables · progreso con peso, actividad comparada y marcas por grupo · perfi
 · ciclo de entrenamiento · pantalla de rachas · logros · batallas entre
 amigos · compartir un entrenamiento por enlace · recordatorios push.
 
+### Cambios recientes — 20 de agosto de 2026
+
+- **Un entrenamiento por día, descansos que aconsejan.** Ver "El calendario dice
+  cuándo, el ciclo dice qué" en Conceptos del dominio. Toca la tarjeta de
+  Inicio, la pestaña Entrenar y `generate-workout`. **La función hay que
+  volver a desplegarla**: no es una migración.
+- **La zona horaria se guarda al entrar.** Estaba dentro del registro de push y
+  se perdía para todo el que rechazaba las notificaciones, así que el servidor
+  no sabía qué día era para esa persona. Afectaba ya a los recordatorios.
+- **Los mensajes de las Edge Functions llegan al usuario.** `functions.invoke`
+  devolvía siempre "Edge Function returned a non-2xx status code"; el texto real
+  viaja en `context`. El aviso del límite de IA tampoco se veía.
+
 ### Cambios recientes — 12 de agosto de 2026
 
 - **Bienvenida neutral.** Los ejemplos de los campos no contienen datos ni
@@ -293,6 +306,58 @@ una propuesta que el usuario ni llega a mirar le cambiaría los entrenamientos.
 hecho o no; la pantalla decide mirando `completedAt`. Si sigue pendiente, es el
 entrenamiento vigente por muchos días que pasen. Solo cuando se termina
 aparece "preparar el siguiente". No se genera uno nuevo cada día.
+
+### El calendario dice cuándo, el ciclo dice qué
+
+Son dos preguntas distintas y hay que mantenerlas separadas. El ciclo sigue
+avanzando por entrenamientos hechos, nunca por días; encima hay una capa fina
+—`src/features/workout/schedule.ts`— que solo puede contestar "hoy sí / hoy
+no". **En cuanto el calendario pudiera decir "hoy toca pierna" volveríamos al
+problema que resolvió `0028`**: saltarse un día desfasaba el reparto para
+siempre.
+
+Son dos reglas, y una es blanda a propósito:
+
+- **Un entrenamiento por día** (dura). Al terminar, hasta la medianoche local
+  no se prepara otro, y la tarjeta de Inicio enseña la cuenta atrás.
+- **Los días de descanso avisan, no bloquean** (blanda). `training_days` es una
+  intención declarada, no un contrato: quien se saltó el viernes quiere
+  entrenar el sábado, y negárselo por respetar un dato que escribió él mismo le
+  arruina la semana. La tarjeta lo dice y deja "Entrenar igualmente".
+
+`estadoDeHoy()` devuelve uno de cuatro estados y **el orden de precedencia es
+parte del diseño**: `hecho` gana a todo, `listo` gana al descanso —si el
+entrenamiento ya está preparado, recordarte que hoy descansas es ruido—, y
+`descanso` solo aparece cuando no hay nada preparado.
+
+Cuatro decisiones que no son arbitrarias:
+
+- **A medianoche local, no a las 24 horas de terminar.** Con un plazo de 24 h,
+  entrenar el lunes a las 20:00 impide entrenar el martes por la mañana, que es
+  penalizar a quien madruga. El precio —terminar a las 00:30 quema el día
+  nuevo— es mucho más raro que el caso que arregla.
+- **Se pregunta antes de terminar**, y solo si quedan series sin marcar
+  (`confirmarFin` en `ActiveWorkout`). Antes no se preguntaba porque terminar no
+  costaba nada; ahora cierra el día, así que un toque de más en el último
+  ejercicio dejaba al usuario fuera hasta mañana sin quererlo.
+- **"Entrenar igualmente" viaja en la ruta** (`/(tabs)/workout?forzar=1`). Sin
+  ese parámetro, la pantalla de Entrenar volvía a preguntar lo mismo: dos
+  toques para una sola decisión.
+- **Nunca se bloquea por falta de datos.** Sin `training_days` todos los días
+  valen; con las sesiones aún cargando no se afirma nada.
+
+El freno se repite en `generate-workout` y no es redundancia: el reloj del móvil
+se cambia en dos toques, y **rechazar allí ahorra la llamada a Claude y la cuota
+diaria**. Va antes de leer el catálogo, a propósito. Para que el mensaje llegue
+al usuario hizo falta `mensajeDeFuncion()` en `services/workout.ts`: ante un
+código distinto de 2xx, `functions.invoke` devuelve siempre el mismo texto en
+inglés y el cuerpo real viaja en `context`, sin leer. Antes de esto, el aviso
+del límite de IA tampoco se veía.
+
+La zona horaria la escribe `useTimezoneSync` al entrar. **Vivía dentro de
+`registerForPush` y ahí no llegaba nunca para quien rechazaba las
+notificaciones**, porque esa función sale antes con `return null`. Sin ella el
+servidor no sabe qué día es para esa persona.
 
 **Los entrenamientos compartidos no entran en el ciclo.** Se guardan con
 `source: 'shared'` y **sin** `cycle_id`, y `fetchLatestPlan` los excluye con un
