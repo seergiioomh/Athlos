@@ -435,9 +435,14 @@ async function loadContext(
   // una sesión salió floja mucho mejor que los kilos levantados.
   const { data: sessions } = await supabase
     .from("workout_sessions")
+    // Solo lo que la app escribe. `focus`, `energy_before`, `ate_well` y
+    // `discomfort` existen desde la `0015` y no las rellena nadie:
+    // `saveSessionFeedback` guarda energía durante, nota y comentarios, y
+    // `openSession` inserta solo usuario y plan. Viajaban como cuatro `null`
+    // por sesión en cada mensaje del chat. Mismo arreglo que en
+    // `generate-workout`.
     .select(
-      `started_at, finished_at, focus, rating, energy_before, energy_during,
-       ate_well, discomfort, notes,
+      `started_at, finished_at, rating, energy_during, notes,
        session_sets ( set_number, weight_kg, reps, exercises ( name ) )`,
     )
     .eq("user_id", userId)
@@ -478,7 +483,9 @@ async function loadContext(
           } además del gimnasio`,
         profile.cardio && `- Cardio: ${profile.cardio}`,
         profile.daily_activity && `- Actividad diaria: ${profile.daily_activity}`,
-        profile.sleep_hours && `- Horas de sueño: ${profile.sleep_hours}`,
+        // Declaradas una vez en el perfil, no lo que durmió anoche. Ver el
+        // mismo campo en `generate-workout`.
+        profile.sleep_hours && `- Horas de sueño que declara habitualmente: ${profile.sleep_hours}`,
         profile.limitations && `- Limitaciones: ${profile.limitations}`,
         profile.avoid_exercises && `- No quiere hacer: ${profile.avoid_exercises}`,
       ]

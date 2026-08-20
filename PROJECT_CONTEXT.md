@@ -601,6 +601,30 @@ Herramientas del coach — todas devuelven propuestas, ninguna escribe:
 `ajustar_ejercicio`, `sustituir_ejercicio`, `cambiar_reparto_semanal`,
 `actualizar_limitaciones`.
 
+### El prompt solo pide columnas que alguien rellena
+
+`generate-workout` y `coach-chat` pedían `focus`, `energy_before`, `ate_well` y
+`discomfort` del historial de sesiones. Las cuatro existen desde la `0015` y
+**no las escribe nadie**: `saveSessionFeedback` guarda energía *durante*, nota y
+comentarios, y `openSession` inserta solo usuario y plan. Viajaban como cuatro
+`null` por sesión —ocho sesiones en cada generación, cinco en cada mensaje del
+chat—, y encima el prompt le pedía a Claude que usara la «energía antes», que
+nunca ha existido.
+
+Si algún día se recogen, hay que añadirlas **en la consulta y en la regla del
+prompt**: las dos, o el prompt vuelve a describir datos que no llegan.
+
+**El sueño declarado es contexto, no una orden.** `sleep_hours` es lo que el
+usuario puso una vez en el perfil —ya ni se pregunta en la bienvenida—, y había
+una regla que decía «si duerme poco, baja el volumen». Como el número no cambia
+nunca, quien escribió 6 arrastraba volumen recortado **para siempre**. La regla
+se quedó con la actividad diaria y el cardio, que sí son rasgos estables, y el
+dato se etiqueta como declarado. El estado de hoy sale del historial de
+sesiones, que es real y reciente.
+
+`generate-split` es distinto y no había que tocarlo: manda el perfil entero como
+JSON, así que ahí `sleep_hours` sí se usa aunque no aparezca como línea.
+
 ### Caché de prompts
 
 Las tres de IA usan `cache_control: { type: "ephemeral" }`. Marca un punto de

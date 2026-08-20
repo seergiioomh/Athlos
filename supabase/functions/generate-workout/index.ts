@@ -200,14 +200,14 @@ Reglas:
 - Si su técnica en los básicos no es sólida, no le mandes compuestos con barra
   a por su límite: usa máquinas, mancuernas o versiones más controlables.
 - Sesga el volumen hacia lo que quiere priorizar, sin abandonar el resto.
-- Si duerme poco, tiene mucha actividad diaria o hace bastante cardio, baja el
-  volumen: no lo va a asimilar.
+- Si tiene mucha actividad diaria o hace bastante cardio, baja el volumen: no
+  lo va a asimilar.
 - No propongas ejercicios que haya dicho que no quiere hacer.
 - Progresa con criterio: si el usuario cerró todas las series al objetivo en un
   ejercicio, sube la carga ligeramente; si se quedó corto, mantenla o bájala.
-- El historial trae valoraciones de cada sesión (nota, energía antes y durante,
-  si había comido bien, molestias y comentarios). Úsalas: si viene de sesiones
-  con poca energía o con molestias, no es el día de subir cargas.
+- El historial trae la valoración de cada sesión: nota, energía durante y
+  comentarios. Úsalas: si viene de sesiones con poca energía o de comentarios
+  que hablan de molestias, no es el día de subir cargas.
 - Sin historial de un ejercicio, propón una carga conservadora.
 - Los ejercicios de peso corporal llevan target_weight_kg = 0.
 - Alterna el foco respecto a las últimas sesiones para no repetir grupo muscular
@@ -581,11 +581,22 @@ async function recentHistory(
   supabase: ReturnType<typeof createClient>,
   userId: string,
 ) {
+  // Solo lo que la app escribe de verdad.
+  //
+  // Se pedían además `focus`, `energy_before`, `ate_well` y `discomfort`, y las
+  // cuatro columnas existen desde la `0015` pero **nadie las rellena**:
+  // `saveSessionFeedback` guarda energía durante, nota y comentarios, y
+  // `openSession` inserta solo usuario y plan. Así que el historial viajaba al
+  // prompt con cuatro `null` por sesión, ocho sesiones cada vez, en todas las
+  // generaciones. Tokens pagados por nada, y una pista falsa para quien lea
+  // esto pensando que ese dato se recoge en alguna parte.
+  //
+  // Si algún día se recogen, hay que añadirlas aquí Y en la regla del prompt
+  // que habla del historial: las dos cosas, o vuelve a mentir.
   const { data } = await supabase
     .from("workout_sessions")
     .select(
-      `started_at, focus, rating, energy_before, energy_during, ate_well,
-       discomfort, notes,
+      `started_at, rating, energy_during, notes,
        session_sets ( set_number, weight_kg, reps, exercises ( slug, name ) )`,
     )
     .eq("user_id", userId)
@@ -821,7 +832,13 @@ function describeProfile(profile: Record<string, unknown>) {
       } además del gimnasio`,
     profile.cardio && `- Cardio que hace: ${profile.cardio}`,
     profile.daily_activity && `- Actividad diaria fuera del gimnasio: ${profile.daily_activity}`,
-    profile.sleep_hours && `- Horas de sueño: ${profile.sleep_hours}`,
+    // "Declaradas" y no "horas de sueño" a secas: es lo que el usuario puso
+    // una vez en el perfil, no lo que durmió anoche. Sin ese matiz se leía como
+    // el estado de hoy, y con la regla que había —"si duerme poco, baja el
+    // volumen"— quien escribió 6 arrastraba el volumen recortado para siempre,
+    // durmiera como durmiera. Ahora es contexto, no una orden de bajar carga:
+    // lo de hoy sale del historial de sesiones, que sí es real y reciente.
+    profile.sleep_hours && `- Horas de sueño que declara habitualmente: ${profile.sleep_hours}`,
     profile.limitations && `- Limitaciones que declara: ${profile.limitations}`,
     profile.avoid_exercises && `- Ejercicios que no quiere hacer: ${profile.avoid_exercises}`,
   ];
