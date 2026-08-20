@@ -81,7 +81,11 @@ Acceso y registro · bienvenida en 7 pasos · inicio con el entrenamiento del d�
 fin de entrenamiento con resumen y sensaciones · chat con el coach y propuestas
 aplicables · progreso con peso, actividad comparada y marcas por grupo · perfil
 · ciclo de entrenamiento · pantalla de rachas · logros · batallas entre
-amigos · compartir un entrenamiento por enlace · recordatorios push.
+amigos · recordatorios push.
+
+Compartir un entrenamiento por enlace **está construido pero oculto**: el botón
+se retiró de la hoja de previsualización porque el enlace no llega usable. Ver
+Pendiente.
 
 ### Cambios recientes — 20 de agosto de 2026
 
@@ -145,9 +149,16 @@ amigos · compartir un entrenamiento por enlace · recordatorios push.
   ciclos y enviar 20 mensajes al coach por día UTC. Se aplican en Supabase
   antes de llamar a Claude; la caché abarata cada llamada, pero no sustituye
   este tope de coste.
-- **Los enlaces de compartir usan el esquema `athlos://`**, que WhatsApp no
-  convierte en enlace tocable: llega como texto plano. Arreglarlo son Universal
-  Links, que exigen un dominio propio, el archivo
+- **Compartir un entrenamiento está oculto, no borrado.** El botón salió de
+  `WorkoutPreviewSheet` porque el enlace no funciona: usa el esquema
+  `athlos://`, que WhatsApp no convierte en enlace tocable, así que llega como
+  texto plano y quien lo recibe no puede hacer nada con él. Todo lo de detrás
+  sigue en su sitio —`share.ts`, la ruta `shared-workout`,
+  `importSharedWorkout` y el filtro `.neq("source", "shared")`— para que los
+  enlaces ya repartidos se sigan abriendo y volver a enseñarlo sea reponer un
+  botón. **No quitar esas piezas** creyendo que son código muerto.
+
+  Arreglarlo de verdad son Universal Links: dominio propio, el archivo
   `apple-app-site-association` servido por HTTPS y recompilar con el
   entitlement `associatedDomains`. Aplazado a conciencia.
 - Borrar la rama `master` del remoto, que quedó duplicada.
