@@ -1,7 +1,8 @@
-import { CheckmarkCircle02Icon, Moon02Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { Moon02Icon, Tick02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 
 import { AthlosButton } from "@/components/ui/AthlosButton";
 import { Icon } from "@/components/ui/Icon";
@@ -68,33 +69,23 @@ export function TodayWorkoutCard({
   if (estado.estado === "hecho") {
     return (
       <View style={styles.card}>
-        <View style={styles.heading}>
-          <Text style={styles.label}>Tu entrenamiento</Text>
+        <Text style={styles.label}>Tu entrenamiento</Text>
 
-          <View style={styles.chip}>
-            <HugeiconsIcon
-              icon={CheckmarkCircle02Icon}
-              size={14}
-              color={HomeColors.primary}
-              strokeWidth={2}
-            />
-            <Text style={styles.chipText}>Hecho</Text>
+        {/* La marca de visto hace el trabajo que antes hacía un párrafo. Lo
+            único que hay que contar aquí es "hecho" y "cuánto falta"; explicar
+            por qué conviene descansar es un sermón que nadie vuelve a leer una
+            segunda vez. */}
+        <View style={styles.doneRow}>
+          <RestRing minutosRestantes={estado.minutosRestantes} />
+
+          <View style={styles.copy}>
+            {/* Sin el `marginTop` del título general: aquí el texto se alinea
+                con el anillo, y ese hueco lo descentraba. */}
+            <Text style={[styles.title, styles.doneTitle]}>Hecho por hoy</Text>
+            <Text style={styles.doneHint}>
+              Siguiente en {cuentaAtras(estado.minutosRestantes)}
+            </Text>
           </View>
-        </View>
-
-        <Text style={styles.title}>Ya has entrenado hoy</Text>
-        <Text style={styles.description}>
-          Buen trabajo. Lo que has levantado se convierte en músculo mientras
-          descansas, así que hoy hemos terminado.
-        </Text>
-
-        {/* La cuenta atrás no es un castigo, es una respuesta: quien vuelve a
-            Inicio a los diez minutos quiere saber cuándo puede seguir. */}
-        <View style={styles.countdown}>
-          <Icon name="clock" size={18} color={HomeColors.primary} />
-          <Text style={styles.countdownText}>
-            Siguiente entrenamiento en {cuentaAtras(estado.minutosRestantes)}
-          </Text>
         </View>
       </View>
     );
@@ -208,6 +199,65 @@ export function TodayWorkoutCard({
   );
 }
 
+const ANILLO = 76;
+const TRAZO = 6;
+
+/**
+ * Anillo con la marca de visto: cuánto queda para poder entrenar otra vez.
+ *
+ * El arco mide **el día**, no la espera. La espera empieza cuando cada uno
+ * termina —a las 8:00 o a las 21:00— así que un arco sobre ella no querría
+ * decir lo mismo para dos personas; el día sí es igual para todos y no hay que
+ * explicarlo. A medianoche está lleno, que es justo cuando se desbloquea.
+ */
+function RestRing({ minutosRestantes }: { minutosRestantes: number }) {
+  const radio = (ANILLO - TRAZO) / 2;
+  const vuelta = 2 * Math.PI * radio;
+
+  const transcurrido = Math.min(1, Math.max(0, 1 - minutosRestantes / (24 * 60)));
+
+  return (
+    <View style={styles.ring}>
+      {/* El giro va en el estilo de la vista y no en props del SVG: sin él el
+          arco arrancaría a las tres en punto, porque los ángulos de SVG parten
+          del eje X. Como el lienzo es cuadrado, girarlo no mueve sus límites, y
+          la marca de visto queda fuera del giro. */}
+      <Svg
+        width={ANILLO}
+        height={ANILLO}
+        style={[StyleSheet.absoluteFill, styles.ringRotado]}
+      >
+        <Circle
+          cx={ANILLO / 2}
+          cy={ANILLO / 2}
+          r={radio}
+          fill="none"
+          stroke={HomeColors.surfaceHighlight}
+          strokeWidth={TRAZO}
+        />
+        <Circle
+          cx={ANILLO / 2}
+          cy={ANILLO / 2}
+          r={radio}
+          fill="none"
+          stroke={HomeColors.primary}
+          strokeWidth={TRAZO}
+          strokeLinecap="round"
+          strokeDasharray={vuelta}
+          strokeDashoffset={vuelta * (1 - transcurrido)}
+        />
+      </Svg>
+
+      <HugeiconsIcon
+        icon={Tick02Icon}
+        size={34}
+        color={HomeColors.primary}
+        strokeWidth={2.6}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: { marginTop: 30, backgroundColor: HomeColors.surface, borderRadius: 28, padding: 24 },
   heading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
@@ -215,15 +265,15 @@ const styles = StyleSheet.create({
   preview: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: HomeColors.primarySoft },
   previewText: { fontSize: 12, fontWeight: "700", color: HomeColors.primary },
 
-  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: HomeColors.primarySoft },
-  chipText: { fontSize: 12, fontWeight: "700", color: HomeColors.primary },
-
   // Turquesa, que en la paleta es el color del descanso.
   chipRest: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: HomeColors.tealSoft },
   chipRestText: { fontSize: 12, fontWeight: "700", color: HomeColors.teal },
 
-  countdown: { marginTop: 20, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 18, backgroundColor: HomeColors.primarySoft },
-  countdownText: { flex: 1, fontSize: 15, fontWeight: "600", color: HomeColors.primary },
+  doneRow: { marginTop: 18, flexDirection: "row", alignItems: "center", gap: 18 },
+  ring: { width: ANILLO, height: ANILLO, alignItems: "center", justifyContent: "center" },
+  ringRotado: { transform: [{ rotate: "-90deg" }] },
+  doneTitle: { marginTop: 0 },
+  doneHint: { marginTop: 4, fontSize: 15, color: HomeColors.textSecondary },
 
   // Un enlace, no un botón: la opción existe, pero no compite con nada.
   secondary: { marginTop: 18, height: 46, alignItems: "center", justifyContent: "center" },
