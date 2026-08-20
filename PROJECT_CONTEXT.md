@@ -144,7 +144,7 @@ Pendiente.
 | Supabase, *Redirect URLs* | `athlos://confirm` y `athlos://reset-password` |
 | Supabase, SMTP | El de serie. Pocos correos por hora y **plantillas no editables** |
 | Supabase, registros | Permitidos |
-| Supabase, migraciones | Aplicadas hasta `0048`; `0049` pendiente de ejecutar |
+| Supabase, migraciones | Aplicadas hasta `0049`; recuperación de sesión probada |
 | Supabase, funciones | Cinco activas: las tres de IA, `send-reminders` y `close-battles` |
 | Supabase, extensiones | `pg_cron` y `pg_net` activas, cron `enviar-recordatorios` cada hora |
 | Supabase, secretos | `ANTHROPIC_API_KEY` y `CRON_SECRET` |
