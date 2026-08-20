@@ -189,6 +189,33 @@ export async function discardPlan(
 }
 
 /** Pide un plan nuevo a la IA. La clave de Anthropic vive en la función. */
+/**
+ * El mensaje que mandó la Edge Function, no el genérico de supabase-js.
+ *
+ * Ante un código distinto de 2xx, `functions.invoke` devuelve un
+ * `FunctionsHttpError` cuyo `message` es siempre el mismo texto en inglés
+ * ("Edge Function returned a non-2xx status code"): el cuerpo con la
+ * explicación viaja en `context`, que es la `Response` sin leer. Sin esto, al
+ * usuario le llegaba esa frase en lugar de "Ya has entrenado hoy" o "Has
+ * alcanzado el límite de 3 entrenamientos generados hoy".
+ */
+async function mensajeDeFuncion(error: unknown): Promise<string> {
+  const respuesta = (error as { context?: unknown })?.context;
+
+  if (respuesta instanceof Response) {
+    try {
+      const cuerpo = await respuesta.clone().json();
+      const mensaje = (cuerpo as { error?: unknown })?.error;
+
+      if (typeof mensaje === "string" && mensaje) return mensaje;
+    } catch {
+      // Sin cuerpo, o con un cuerpo que no es JSON. Se cae al genérico.
+    }
+  }
+
+  return error instanceof Error ? error.message : "No se pudo generar el plan";
+}
+
 export async function generatePlan(
   userId: string,
   focus?: string
@@ -199,7 +226,7 @@ export async function generatePlan(
     body: { focus },
   });
 
-  if (error) throw error;
+  if (error) throw new Error(await mensajeDeFuncion(error));
 
   const planId = (data as { plan_id?: string })?.plan_id;
   if (!planId) throw new Error("La función no devolvió ningún plan");
