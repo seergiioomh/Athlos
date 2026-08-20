@@ -37,10 +37,6 @@ export async function registerForPush(userId: string): Promise<string | null> {
     projectId,
   });
 
-  // La zona horaria viaja con el token porque es la única forma que tiene el
-  // servidor de saber qué hora es para esta persona al decidir a quién avisa.
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
   const { error } = await supabase.from("push_tokens").upsert(
     {
       token,
@@ -53,9 +49,9 @@ export async function registerForPush(userId: string): Promise<string | null> {
 
   if (error) throw error;
 
-  if (timezone) {
-    await supabase.from("profiles").update({ timezone }).eq("id", userId);
-  }
+  // La zona horaria no se escribe aquí: la guarda `syncTimezone` al entrar en
+  // la app. Estaba en esta función y se perdía para todo el que rechazaba los
+  // avisos, porque más arriba ya se ha salido con `return null`.
 
   return token;
 }

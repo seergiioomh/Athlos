@@ -55,6 +55,30 @@ export async function saveProfile(
 }
 
 /**
+ * Guarda la zona horaria de este móvil en el perfil.
+ *
+ * Es el único dato del perfil que el servidor no puede deducir por su cuenta y
+ * sin él no sabe qué hora —ni qué día— es para esta persona. Lo necesitan los
+ * recordatorios (`users_to_remind`) y el freno de un entrenamiento por día
+ * (`generate-workout`).
+ *
+ * Vivía dentro de `registerForPush`, y ahí llegaba tarde o no llegaba: esa
+ * función sale antes de escribirlo si el usuario rechaza los avisos, así que
+ * todo el que dijo que no tenía la columna vacía. Ahora se guarda al entrar,
+ * tenga avisos o no.
+ *
+ * Que falle no importa: el servidor cae a `Europe/Madrid` y como mucho el
+ * cálculo se desplaza unas horas. No es motivo para romper el arranque.
+ */
+export async function syncTimezone(userId: string): Promise<void> {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  if (!timezone) return;
+
+  await supabase.from("profiles").update({ timezone }).eq("id", userId);
+}
+
+/**
  * Días locales en los que el usuario terminó al menos un entrenamiento.
  *
  * Se devuelven las fechas porque el calendario necesita pintar cada casilla;

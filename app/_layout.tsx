@@ -16,6 +16,7 @@ import {
 import { HomeColors } from "@/features/home/home-theme";
 import { usePushNotifications } from "@/features/notifications/push";
 import { useProfile } from "@/features/onboarding/queries";
+import { useTimezoneSync } from "@/features/profile/timezone";
 import { configError } from "@/lib/supabase";
 
 // La pantalla de carga la controlamos nosotros: así nunca se queda congelada
@@ -55,6 +56,7 @@ function RootNavigator() {
   useInitSession();
   useRecoveryLink();
   usePushNotifications();
+  useTimezoneSync();
 
   const { status } = useSession();
   const recovering = useRecovering();
